@@ -1,0 +1,405 @@
+/* リセットと基本スタイル */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #0f3460;
+    --text-primary: #eaeaea;
+    --text-secondary: #a0a0a0;
+    --accent-green: #00d26a;
+    --accent-red: #ff6b6b;
+    --accent-yellow: #ffc107;
+    --accent-blue: #4dabf7;
+    --border-color: #2a2a4a;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+.container {
+    display: grid;
+    grid-template-areas:
+        "header header"
+        "chart panel";
+    grid-template-columns: 1fr 280px;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+    gap: 1px;
+    background-color: var(--border-color);
+}
+
+/* ヘッダー */
+.header {
+    grid-area: header;
+    background-color: var(--bg-secondary);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-group label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.control-group select {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.control-group select:hover {
+    border-color: var(--accent-blue);
+}
+
+/* Fear & Greed バッジ */
+.fear-greed-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--bg-tertiary);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.badge-label {
+    color: var(--text-secondary);
+}
+
+.badge-value {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.badge-text {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* Fear & Greed 値による色分け */
+.fear-greed-badge.extreme-fear .badge-value { color: var(--accent-red); }
+.fear-greed-badge.fear .badge-value { color: #ff9f43; }
+.fear-greed-badge.neutral .badge-value { color: var(--accent-yellow); }
+.fear-greed-badge.greed .badge-value { color: #a3e635; }
+.fear-greed-badge.extreme-greed .badge-value { color: var(--accent-green); }
+
+.last-update {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    display: flex;
+    gap: 5px;
+}
+
+/* チャートエリア */
+.chart-area {
+    grid-area: chart;
+    background-color: var(--bg-primary);
+    padding: 10px;
+}
+
+#chart-container {
+    width: 100%;
+    height: calc(100vh - 80px);
+    min-height: 400px;
+}
+
+/* コントロールパネル */
+.control-panel {
+    grid-area: panel;
+    background-color: var(--bg-secondary);
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.control-panel h3 {
+    color: var(--accent-blue);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panel-section {
+    margin-bottom: 20px;
+}
+
+.panel-section h4 {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+/* ボタン */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-primary {
+    background-color: var(--accent-blue);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #3a9ae8;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+}
+
+/* 自動更新チェックボックス */
+.auto-update {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.auto-update input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* ロジックオプション */
+.logic-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.logic-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+.logic-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.logic-item label {
+    cursor: pointer;
+    flex: 1;
+}
+
+.logic-item.future-logic {
+    opacity: 0.5;
+}
+
+.logic-settings {
+    padding: 10px;
+    background-color: var(--bg-primary);
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.setting-row:last-child {
+    margin-bottom: 0;
+}
+
+.setting-row label {
+    color: var(--text-secondary);
+}
+
+.setting-row input[type="number"] {
+    width: 60px;
+    padding: 5px;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* シグナル履歴 */
+.signal-history {
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: var(--bg-primary);
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.no-signals {
+    color: var(--text-secondary);
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.signal-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.signal-item:last-child {
+    margin-bottom: 0;
+}
+
+.signal-item.buy {
+    border-left: 3px solid var(--accent-green);
+}
+
+.signal-item.sell {
+    border-left: 3px solid var(--accent-red);
+}
+
+.signal-type {
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.signal-type.buy {
+    color: var(--accent-green);
+}
+
+.signal-type.sell {
+    color: var(--accent-red);
+}
+
+.signal-date {
+    color: var(--text-secondary);
+}
+
+.signal-reason {
+    flex: 1;
+    text-align: right;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+/* ローディング */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(26, 26, 46, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--bg-tertiary);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* エラーメッセージ */
+.error-message {
+    background-color: rgba(255, 107, 107, 0.2);
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 10px;
+    text-align: center;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .container {
+        grid-template-areas:
+            "header"
+            "chart"
+            "panel";
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    #chart-container {
+        height: 50vh;
+    }
+
+    .control-panel {
+        max-height: 300px;
+    }
+}
