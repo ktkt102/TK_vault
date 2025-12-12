@@ -11,12 +11,12 @@
   <style>
     .custom-scrollbar {
       scrollbar-width: thin;
-      scrollbar-color: rgba(255,255,255,0.4) rgba(0,0,0,0.2);
+      scrollbar-color: rgba(255,255,255,0.7) rgba(0,0,0,0.4);
     }
-    .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6); }
+    .custom-scrollbar::-webkit-scrollbar { width: 12px; height: 12px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.7); border-radius: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.9); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     @keyframes slide-in-from-left { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
@@ -806,8 +806,8 @@
             )}
 
             {isEditing && editingData && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-                <div className="bg-slate-900 w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl border border-slate-700 flex flex-col animate-in zoom-in-95 duration-200">
+              <div className="absolute inset-0 z-50 flex items-start justify-center bg-black/80 p-4 pt-12 backdrop-blur-md overflow-y-auto">
+                <div className="bg-slate-900 w-full max-w-4xl max-h-[90vh] rounded-xl shadow-2xl border border-slate-700 flex flex-col animate-in zoom-in-95 duration-200">
                   <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center rounded-t-xl">
                     <h3 className="text-lg font-bold text-white flex items-center">
                       <Icons.Keyboard className="w-5 h-5 mr-2 text-blue-400" />
