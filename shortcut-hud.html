@@ -8,7 +8,6 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
@@ -34,15 +33,27 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useMemo } = React;
 
-    // Lucide icons as React components
-    const Icon = ({ name, className = "w-4 h-4", ...props }) => {
-      const ref = useRef(null);
-      useEffect(() => {
-        if (ref.current) {
-          lucide.createIcons({ icons: { [name]: lucide[name] }, attrs: { class: className, ...props } });
-        }
-      }, [name, className]);
-      return <i ref={ref} data-lucide={name} className={className} {...props}></i>;
+    // Simple SVG Icon Components
+    const Icons = {
+      Monitor: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
+      Edit: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+      Settings: ({className = "w-5 h-5"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+      Clock: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+      FileText: ({className = "w-3 h-3"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>,
+      CheckSquare: ({className = "w-3 h-3"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
+      Plus: ({className = "w-3 h-3"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>,
+      Trash2: ({className = "w-3 h-3"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+      Play: ({className = "w-5 h-5"}) => <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>,
+      Pause: ({className = "w-5 h-5"}) => <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>,
+      RotateCcw: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+      Calendar: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
+      Search: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+      CheckCircle: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>,
+      Download: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
+      Upload: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>,
+      X: ({className = "w-5 h-5"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>,
+      Keyboard: ({className = "w-5 h-5"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>,
+      Save: ({className = "w-4 h-4"}) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>,
     };
 
     function ShortcutHUD() {
@@ -633,8 +644,8 @@
           <div className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shadow-xl shrink-0">
             <div className="flex items-center space-x-4 w-full overflow-x-auto no-scrollbar">
               <div className="flex items-center text-slate-400 shrink-0 border-r border-slate-700 pr-4 mr-2">
-                <Icon name="monitor" className="w-5 h-5 mr-2" />
-                <span className="text-sm font-bold tracking-widest hidden md:inline">HUD v3.0</span>
+                <Icons.Monitor />
+                <span className="text-sm font-bold tracking-widest hidden md:inline ml-2">HUD v3.0</span>
               </div>
 
               <div className="flex space-x-1">
@@ -670,13 +681,13 @@
                 className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
                 title="設定・データ管理"
                >
-                 <Icon name="settings" className="w-5 h-5" />
+                 <Icons.Settings />
                </button>
                <button
                 onClick={handleEditClick}
                 className="flex items-center px-4 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/50 rounded text-xs font-bold transition-all"
                >
-                <Icon name="edit" className="w-4 h-4 mr-2" />
+                <Icons.Edit className="w-4 h-4 mr-2" />
                 ショートカット編集
                </button>
             </div>
@@ -691,7 +702,7 @@
 
                 <div className="bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg shrink-0">
                   <div className="flex items-center text-slate-400 mb-2">
-                    <Icon name="clock" className="w-4 h-4 mr-2" />
+                    <Icons.Clock className="w-4 h-4 mr-2" />
                     <span className="text-xs font-bold tracking-wider">現在時刻</span>
                   </div>
                   <div className="text-4xl font-mono text-white font-bold tracking-tight tabular-nums">
@@ -715,13 +726,13 @@
                       onClick={() => setNoteMode('memo')}
                       className={`flex-1 py-3 text-xs font-bold flex items-center justify-center transition-colors ${noteMode === 'memo' ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'}`}
                     >
-                      <Icon name="file-text" className="w-3 h-3 mr-2" /> メモ帳
+                      <Icons.FileText className="w-3 h-3 mr-2" /> メモ帳
                     </button>
                     <button
                       onClick={() => setNoteMode('todo')}
                       className={`flex-1 py-3 text-xs font-bold flex items-center justify-center transition-colors ${noteMode === 'todo' ? 'text-green-400 border-b-2 border-green-400 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'}`}
                     >
-                      <Icon name="check-square" className="w-3 h-3 mr-2" /> ToDo
+                      <Icons.CheckSquare className="w-3 h-3 mr-2" /> ToDo
                     </button>
                   </div>
                   <div className="flex-1 relative overflow-hidden bg-slate-950/30">
@@ -739,7 +750,9 @@
                           {todoList.length === 0 && <div className="text-center text-slate-600 text-xs mt-10">タスクなし</div>}
                           {todoList.map(todo => (
                             <div key={todo.id} className={`flex items-center group p-2 rounded hover:bg-slate-800/50 transition-colors ${todo.done ? 'opacity-50' : ''}`}>
-                              <button onClick={() => toggleTodo(todo.id)} className={`w-4 h-4 rounded border mr-2 flex shrink-0 items-center justify-center transition-colors ${todo.done ? 'bg-green-500 border-green-500' : 'border-slate-500 hover:border-green-400'}`}>{todo.done && <Icon name="check-square" className="w-3 h-3 text-white" />}</button>
+                              <button onClick={() => toggleTodo(todo.id)} className={`w-4 h-4 rounded border mr-2 flex shrink-0 items-center justify-center transition-colors ${todo.done ? 'bg-green-500 border-green-500' : 'border-slate-500 hover:border-green-400'}`}>
+                                {todo.done && <span className="text-white text-xs">✓</span>}
+                              </button>
 
                               <span className={`flex-1 text-sm truncate mr-2 ${todo.done ? 'line-through text-slate-500' : 'text-slate-200'}`}>{todo.text}</span>
 
@@ -749,15 +762,22 @@
                                     title="このタスクに集中する"
                                     className={`p-1 rounded-full ${focusedTaskId === todo.id && isTimerRunning ? 'text-yellow-400 bg-yellow-400/10' : 'text-slate-600 hover:text-yellow-400 opacity-0 group-hover:opacity-100'} transition-all`}
                                  >
-                                   {focusedTaskId === todo.id && isTimerRunning ? <Icon name="pause" className="w-3 h-3 fill-current"/> : <Icon name="play" className="w-3 h-3 fill-current"/>}
+                                   {focusedTaskId === todo.id && isTimerRunning ? <Icons.Pause className="w-3 h-3"/> : <Icons.Play className="w-3 h-3"/>}
                                  </button>
                               )}
 
-                              <button onClick={() => deleteTodo(todo.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 p-1 transition-opacity ml-1"><Icon name="trash-2" className="w-3 h-3" /></button>
+                              <button onClick={() => deleteTodo(todo.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 p-1 transition-opacity ml-1">
+                                <Icons.Trash2 className="w-3 h-3" />
+                              </button>
                             </div>
                           ))}
                         </div>
-                        <form onSubmit={addTodo} className="p-3 border-t border-slate-700 bg-slate-800/50 flex"><input value={todoInput} onChange={(e) => setTodoInput(e.target.value)} placeholder="タスク追加..." className="flex-1 bg-slate-900 text-slate-200 text-xs px-3 py-2 rounded-l border border-slate-700 focus:border-green-500 focus:outline-none" /><button type="submit" className="bg-green-600 hover:bg-green-500 text-white px-3 py-2 rounded-r text-xs font-bold transition-colors"><Icon name="plus" className="w-3 h-3" /></button></form>
+                        <form onSubmit={addTodo} className="p-3 border-t border-slate-700 bg-slate-800/50 flex">
+                          <input value={todoInput} onChange={(e) => setTodoInput(e.target.value)} placeholder="タスク追加..." className="flex-1 bg-slate-900 text-slate-200 text-xs px-3 py-2 rounded-l border border-slate-700 focus:border-green-500 focus:outline-none" />
+                          <button type="submit" className="bg-green-600 hover:bg-green-500 text-white px-3 py-2 rounded-r text-xs font-bold transition-colors">
+                            <Icons.Plus className="w-3 h-3" />
+                          </button>
+                        </form>
                       </div>
                     )}
                   </div>
@@ -782,7 +802,7 @@
                   <div className="h-6 mb-4 z-10">
                      {focusedTaskId && (
                         <div className="flex items-center text-xs text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20 animate-pulse">
-                            <Icon name="check-square" className="w-3 h-3 mr-2" />
+                            <span className="mr-2">🎯</span>
                             <span className="max-w-[150px] truncate">Focusing: {focusedTaskText}</span>
                         </div>
                      )}
@@ -790,10 +810,10 @@
 
                   <div className="flex items-center space-x-4 z-10">
                     <button onClick={toggleTimer} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isTimerRunning ? 'bg-yellow-500 hover:bg-yellow-400 scale-105' : 'bg-blue-600 hover:bg-blue-500'} text-white shadow-lg`}>
-                      {isTimerRunning ? <Icon name="pause" className="w-5 h-5 fill-current" /> : <Icon name="play" className="w-5 h-5 fill-current ml-1" />}
+                      {isTimerRunning ? <Icons.Pause /> : <Icons.Play />}
                     </button>
                     <button onClick={resetTimer} className="w-10 h-10 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-slate-300 transition-colors">
-                      <Icon name="rotate-ccw" className="w-4 h-4" />
+                      <Icons.RotateCcw />
                     </button>
                   </div>
 
@@ -802,7 +822,7 @@
 
                 <div className="flex-1 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg flex flex-col relative overflow-hidden">
                    <div className="flex items-center text-slate-400 mb-4 z-10">
-                    <Icon name="calendar" className="w-4 h-4 mr-2" />
+                    <Icons.Calendar className="w-4 h-4 mr-2" />
                     <span className="text-xs font-bold tracking-wider">CALENDAR</span>
                   </div>
 
@@ -824,7 +844,7 @@
 
                 <div className="h-14 border-b border-slate-700 flex items-center justify-between px-4 bg-slate-900 z-20">
                    <div className="relative flex-1 mr-4">
-                      <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <Icons.Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -837,7 +857,7 @@
                      className={`p-2 rounded-lg text-xs font-bold flex items-center transition-all ${showUnmasteredOnly ? 'bg-green-600/20 text-green-400 border border-green-500/50' : 'text-slate-500 hover:bg-slate-800'}`}
                      title={showUnmasteredOnly ? "未習得のみ表示中" : "すべて表示中"}
                    >
-                     <Icon name="check-circle" className={`w-4 h-4 ${showUnmasteredOnly ? 'fill-current' : ''}`} />
+                     <Icons.CheckCircle className={showUnmasteredOnly ? "w-4 h-4 fill-current" : "w-4 h-4"} />
                    </button>
                 </div>
 
@@ -857,20 +877,24 @@
                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
                  <div className="bg-slate-900 w-full max-w-md p-6 rounded-xl shadow-2xl border border-slate-700 animate-in zoom-in-95 duration-200">
                    <div className="flex justify-between items-center mb-6">
-                     <h3 className="text-lg font-bold text-white flex items-center"><Icon name="settings" className="w-5 h-5 mr-2" /> データ管理</h3>
-                     <button onClick={() => setIsSettingsOpen(false)}><Icon name="x" className="w-5 h-5 text-slate-400 hover:text-white" /></button>
+                     <h3 className="text-lg font-bold text-white flex items-center">
+                       <Icons.Settings className="w-5 h-5 mr-2" /> データ管理
+                     </h3>
+                     <button onClick={() => setIsSettingsOpen(false)}>
+                       <Icons.X className="w-5 h-5 text-slate-400 hover:text-white" />
+                     </button>
                    </div>
                    <div className="space-y-4">
                      <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                         <p className="text-xs text-slate-400 mb-3">すべてのショートカット、メモ、ToDoデータをJSONファイルとして保存します。</p>
                         <button onClick={exportData} className="w-full flex items-center justify-center py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-bold transition-colors">
-                          <Icon name="download" className="w-4 h-4 mr-2" /> データをエクスポート
+                          <Icons.Download className="w-4 h-4 mr-2" /> データをエクスポート
                         </button>
                      </div>
                      <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                         <p className="text-xs text-slate-400 mb-3">保存したJSONファイルを読み込んでデータを復元します。</p>
                         <button onClick={importData} className="w-full flex items-center justify-center py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition-colors">
-                          <Icon name="upload" className="w-4 h-4 mr-2" /> データをインポート
+                          <Icons.Upload className="w-4 h-4 mr-2" /> データをインポート
                         </button>
                      </div>
                    </div>
@@ -882,15 +906,27 @@
               <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
                 <div className="bg-slate-900 w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl border border-slate-700 flex flex-col animate-in zoom-in-95 duration-200">
                   <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center rounded-t-xl">
-                    <h3 className="text-lg font-bold text-white flex items-center"><Icon name="keyboard" className="w-5 h-5 mr-2 text-blue-400" />編集中のアプリ: <span className="text-blue-400 ml-1">{editingData.displayName}</span></h3>
-                    <button onClick={() => setIsEditing(false)}><Icon name="x" className="w-5 h-5 text-slate-400 hover:text-white" /></button>
+                    <h3 className="text-lg font-bold text-white flex items-center">
+                      <Icons.Keyboard className="w-5 h-5 mr-2 text-blue-400" />
+                      編集中のアプリ: <span className="text-blue-400 ml-1">{editingData.displayName}</span>
+                    </h3>
+                    <button onClick={() => setIsEditing(false)}>
+                      <Icons.X className="w-5 h-5 text-slate-400 hover:text-white" />
+                    </button>
                   </div>
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-900 custom-scrollbar">
                     {editingData.groups.map((group, gIndex) => (
                       <div key={gIndex} className="bg-slate-800/40 rounded-lg border border-slate-700/50 p-4">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center flex-1 mr-4"><span className="text-xs text-slate-500 font-mono mr-2">カテゴリ</span><input value={group.category} onChange={(e) => updateGroupName(gIndex, e.target.value)} className="bg-transparent text-blue-300 font-bold border-b border-slate-600 focus:border-blue-400 focus:outline-none w-full py-1" /></div>
-                          <div className="flex space-x-1"><button onClick={() => deleteGroup(gIndex)} className="p-1 text-red-500 hover:bg-red-900/20 rounded"><Icon name="trash-2" className="w-4 h-4"/></button></div>
+                          <div className="flex items-center flex-1 mr-4">
+                            <span className="text-xs text-slate-500 font-mono mr-2">カテゴリ</span>
+                            <input value={group.category} onChange={(e) => updateGroupName(gIndex, e.target.value)} className="bg-transparent text-blue-300 font-bold border-b border-slate-600 focus:border-blue-400 focus:outline-none w-full py-1" />
+                          </div>
+                          <div className="flex space-x-1">
+                            <button onClick={() => deleteGroup(gIndex)} className="p-1 text-red-500 hover:bg-red-900/20 rounded">
+                              <Icons.Trash2 className="w-4 h-4"/>
+                            </button>
+                          </div>
                         </div>
                         <div className="space-y-2 pl-4 border-l-2 border-slate-700/50">
                           {group.items.map((item, iIndex) => (
@@ -903,14 +939,18 @@
                                 className={`flex items-center px-2 py-1.5 rounded border text-xs font-bold transition-all ${item.mastered ? 'bg-green-600/20 border-green-500 text-green-400' : 'border-slate-600 text-slate-500 hover:border-slate-400'}`}
                                 title="習得済みにする"
                               >
-                                 <Icon name="check-circle" className={`w-3 h-3 mr-1 ${item.mastered ? 'fill-current' : ''}`} />
+                                 <Icons.CheckCircle className={item.mastered ? "w-3 h-3 mr-1 fill-current" : "w-3 h-3 mr-1"} />
                                  {item.mastered ? '習得済' : '未習得'}
                               </button>
 
-                              <button onClick={() => deleteItem(gIndex, iIndex)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 p-1"><Icon name="x" className="w-4 h-4" /></button>
+                              <button onClick={() => deleteItem(gIndex, iIndex)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 p-1">
+                                <Icons.X className="w-4 h-4" />
+                              </button>
                             </div>
                           ))}
-                          <button onClick={() => addItem(gIndex)} className="mt-1 text-xs text-blue-400 hover:text-blue-300 flex items-center"><Icon name="plus" className="w-3 h-3 mr-1"/> アイテム追加</button>
+                          <button onClick={() => addItem(gIndex)} className="mt-1 text-xs text-blue-400 hover:text-blue-300 flex items-center">
+                            <Icons.Plus className="w-3 h-3 mr-1"/> アイテム追加
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -918,7 +958,10 @@
                   </div>
                   <div className="p-4 border-t border-slate-700 bg-slate-800/80 rounded-b-xl flex justify-end space-x-3">
                     <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-300 hover:text-white text-sm">キャンセル</button>
-                    <button onClick={handleSave} className="flex items-center px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded shadow-lg"><Icon name="save" className="w-4 h-4 mr-2" />保存する</button>
+                    <button onClick={handleSave} className="flex items-center px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded shadow-lg">
+                      <Icons.Save className="w-4 h-4 mr-2" />
+                      保存する
+                    </button>
                   </div>
                 </div>
               </div>
