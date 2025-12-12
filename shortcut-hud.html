@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shortcut HUD - キーボードショートカット学習ツール</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes slide-in-from-left { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes slide-in-from-bottom { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes zoom-in-95 { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .animate-in { animation-duration: 0.5s; animation-fill-mode: both; }
+    .slide-in-from-left { animation-name: slide-in-from-left; }
+    .slide-in-from-bottom { animation-name: slide-in-from-bottom; }
+    .zoom-in-95 { animation-name: zoom-in-95; }
+    .duration-500 { animation-duration: 500ms; }
+    .duration-200 { animation-duration: 200ms; }
+    .delay-100 { animation-delay: 100ms; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // Lucide icons as React components
+    const Icon = ({ name, className = "w-4 h-4", ...props }) => {
+      const ref = useRef(null);
+      useEffect(() => {
+        if (ref.current) {
+          lucide.createIcons({ icons: { [name]: lucide[name] }, attrs: { class: className, ...props } });
+        }
+      }, [name, className]);
+      return <i ref={ref} data-lucide={name} className={className} {...props}></i>;
+    };
+
+    function ShortcutHUD() {
+      const canvasRef = useRef(null);
+      const containerRef = useRef(null);
+
+      const [activeApp, setActiveApp] = useState('excel.exe');
+      const [scrollOffset, setScrollOffset] = useState(0);
+      useEffect(() => { setScrollOffset(0); }, [activeApp]);
+
+      const [animProgress, setAnimProgress] = useState(0);
+      const requestRef = useRef({});
+
+      const [isEditing, setIsEditing] = useState(false);
+      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+      const [editingData, setEditingData] = useState(null);
+
+      const [searchQuery, setSearchQuery] = useState('');
+      const [showUnmasteredOnly, setShowUnmasteredOnly] = useState(false);
+
+      const [time, setTime] = useState(new Date());
+      useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+      }, []);
+
+      const getCalendarDays = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const days = [];
+        for (let i = 0; i < firstDay; i++) days.push(null);
+        for (let i = 1; i <= daysInMonth; i++) days.push(i);
+        return days;
+      };
+      const currentDay = new Date().getDate();
+
+      const initialData = {
+        'desktop': {
+          displayName: 'Desktop',
+          color: '#00a8e8',
+          groups: [
+            {
+              category: 'システム全般',
+              items: [
+                { key: 'Win + D', desc: 'デスクトップを表示/非表示', mastered: false },
+                { key: 'Win + E', desc: 'エクスプローラーを開く', mastered: true },
+                { key: 'Win + L', desc: 'PCをロック (離席時)', mastered: true },
+                { key: 'Win + V', desc: 'クリップボード履歴 (必須)', mastered: false },
+                { key: 'Win + .', desc: '絵文字・記号パネル', mastered: false },
+                { key: 'Win + Shift + S', desc: '画面切り取り (スクショ)', mastered: true },
+                { key: 'Ctrl + Shift + Esc', desc: 'タスクマネージャー', mastered: false },
+              ]
+            },
+            {
+              category: 'ウィンドウ操作',
+              items: [
+                { key: 'Win + ← / →', desc: 'ウィンドウを左右に分割', mastered: false },
+                { key: 'Win + ↑ / ↓', desc: '最大化 / 最小化', mastered: false },
+                { key: 'Alt + Tab', desc: 'アプリ切り替え', mastered: true },
+                { key: 'Win + Tab', desc: 'タスクビュー (一覧)', mastered: false },
+              ]
+            },
+            {
+              category: '仮想デスクトップ',
+              items: [
+                { key: 'Win + Ctrl + D', desc: '新しいデスクトップ作成', mastered: false },
+                { key: 'Win + Ctrl + ←/→', desc: 'デスクトップ切り替え', mastered: false },
+                { key: 'Win + Ctrl + F4', desc: '現在のデスクトップを閉じる', mastered: false },
+              ]
+            }
+          ]
+        },
+        'excel.exe': {
+          displayName: 'Excel',
+          color: '#107c41',
+          groups: [
+            {
+              category: '移動・選択',
+              items: [
+                { key: 'Ctrl + Arrow', desc: 'データの端までジャンプ', mastered: true },
+                { key: 'Ctrl + Shift + Arrow', desc: 'データの端まで選択', mastered: false },
+                { key: 'Ctrl + PgUp/Dn', desc: 'シート切り替え', mastered: false },
+                { key: 'Ctrl + Home', desc: 'A1セルに戻る', mastered: true },
+                { key: 'Alt + PgUp/Dn', desc: '1画面分 左右スクロール', mastered: false },
+              ]
+            },
+            {
+              category: '編集・入力',
+              items: [
+                { key: 'F2', desc: 'セル編集モード', mastered: true },
+                { key: 'Alt + Enter', desc: 'セル内改行', mastered: false },
+                { key: 'Ctrl + D', desc: '上のセルをコピー (下方向)', mastered: false },
+                { key: 'Ctrl + R', desc: '左のセルをコピー (右方向)', mastered: false },
+                { key: 'Alt + E + S', desc: '形式を選択して貼り付け', mastered: false },
+                { key: 'Ctrl + -', desc: '行/列の削除', mastered: false },
+                { key: 'Ctrl + Shift + +', desc: '行/列の挿入', mastered: false },
+              ]
+            },
+            {
+              category: '書式・データ',
+              items: [
+                { key: 'Ctrl + 1', desc: 'セルの書式設定', mastered: true },
+                { key: 'Ctrl + Shift + 1', desc: '桁区切りスタイル', mastered: false },
+                { key: 'Ctrl + Shift + 4', desc: '通貨スタイル', mastered: false },
+                { key: 'Ctrl + Shift + L', desc: 'フィルター ON/OFF', mastered: false },
+                { key: 'Alt + Shift + →', desc: 'グループ化', mastered: false },
+                { key: 'Alt + =', desc: 'オートSUM', mastered: false },
+                { key: 'Ctrl + T', desc: 'テーブルに変換', mastered: false },
+              ]
+            }
+          ]
+        },
+        'winword.exe': {
+          displayName: 'Word',
+          color: '#2b579a',
+          groups: [
+            {
+              category: '文字書式',
+              items: [
+                { key: 'Ctrl + B/I/U', desc: '太字 / 斜体 / 下線', mastered: true },
+                { key: 'Ctrl + Shift + C', desc: '書式のコピー', mastered: false },
+                { key: 'Ctrl + Shift + V', desc: '書式の貼り付け', mastered: false },
+                { key: 'Ctrl + Space', desc: '書式の解除', mastered: false },
+                { key: 'Shift + F3', desc: '大文字/小文字 変換', mastered: false },
+                { key: 'Ctrl + [ / ]', desc: 'フォントサイズ変更', mastered: false },
+              ]
+            },
+            {
+              category: '段落・レイアウト',
+              items: [
+                { key: 'Ctrl + E', desc: '中央揃え', mastered: true },
+                { key: 'Ctrl + J', desc: '両端揃え', mastered: false },
+                { key: 'Ctrl + L / R', desc: '左揃え / 右揃え', mastered: false },
+                { key: 'Ctrl + 1 / 2', desc: '行間 1倍 / 2倍', mastered: false },
+                { key: 'Ctrl + M', desc: 'インデント追加', mastered: false },
+              ]
+            },
+            {
+              category: '挿入・編集',
+              items: [
+                { key: 'Ctrl + Enter', desc: '改ページ', mastered: true },
+                { key: 'Shift + Enter', desc: '段落内改行', mastered: false },
+                { key: 'Ctrl + Alt + 1', desc: '見出し1 スタイル', mastered: false },
+                { key: 'Ctrl + Alt + 2', desc: '見出し2 スタイル', mastered: false },
+                { key: 'Alt + Shift + D', desc: '今日の日付挿入', mastered: false },
+              ]
+            }
+          ]
+        },
+        'powerpnt.exe': {
+          displayName: 'PowerPoint',
+          color: '#c43e1c',
+          groups: [
+            {
+              category: 'スライドショー',
+              items: [
+                { key: 'F5', desc: '最初から再生', mastered: true },
+                { key: 'Shift + F5', desc: '現在のスライドから再生', mastered: true },
+                { key: 'B / .', desc: '画面を黒にする (Black)', mastered: false },
+                { key: 'W / ,', desc: '画面を白にする (White)', mastered: false },
+                { key: 'Ctrl + P', desc: 'ペンツール', mastered: false },
+              ]
+            },
+            {
+              category: '編集・図形',
+              items: [
+                { key: 'Ctrl + M', desc: '新しいスライド', mastered: true },
+                { key: 'Ctrl + D', desc: '複製 (図形/スライド)', mastered: false },
+                { key: 'Ctrl + G', desc: 'グループ化', mastered: false },
+                { key: 'Ctrl + Shift + G', desc: 'グループ解除', mastered: false },
+                { key: 'Ctrl + Shift + C', desc: '図形の書式コピー', mastered: false },
+                { key: 'Ctrl + Shift + Drag', desc: '水平/垂直にコピー', mastered: false },
+              ]
+            }
+          ]
+        },
+        'chrome.exe': {
+          displayName: 'Chrome',
+          color: '#ea4335',
+          groups: [
+            {
+              category: 'タブ操作',
+              items: [
+                { key: 'Ctrl + T', desc: '新しいタブ', mastered: true },
+                { key: 'Ctrl + Shift + T', desc: '閉じたタブを復元 (神)', mastered: true },
+                { key: 'Ctrl + W', desc: '現在のタブを閉じる', mastered: true },
+                { key: 'Ctrl + Tab', desc: '次のタブへ', mastered: false },
+                { key: 'Ctrl + Shift + Tab', desc: '前のタブへ', mastered: false },
+              ]
+            },
+            {
+              category: 'ブラウジング',
+              items: [
+                { key: 'Alt + ← / →', desc: '戻る / 進む', mastered: true },
+                { key: 'Ctrl + L', desc: 'アドレスバーを選択', mastered: true },
+                { key: 'Ctrl + F', desc: 'ページ内検索', mastered: true },
+                { key: 'Ctrl + R', desc: '更新 (リロード)', mastered: true },
+                { key: 'Ctrl + Shift + R', desc: 'スーパーリロード', mastered: false },
+                { key: 'Ctrl + Shift + N', desc: 'シークレットモード', mastered: false },
+              ]
+            }
+          ]
+        }
+      };
+
+      const [shortcutsData, setShortcutsData] = useState(() => {
+        try {
+          const saved = localStorage.getItem('hud_shortcuts_v3');
+          return saved ? JSON.parse(saved) : initialData;
+        } catch(e) { return initialData; }
+      });
+
+      useEffect(() => {
+        localStorage.setItem('hud_shortcuts_v3', JSON.stringify(shortcutsData));
+      }, [shortcutsData]);
+
+      const [noteMode, setNoteMode] = useState('memo');
+      const [noteContent, setNoteContent] = useState('');
+      const [todoList, setTodoList] = useState([]);
+      const [todoInput, setTodoInput] = useState('');
+
+      useEffect(() => {
+        const noteKey = `hud_note_${activeApp}`;
+        const savedNote = localStorage.getItem(noteKey) || '';
+        setNoteContent(savedNote);
+
+        const todoKey = `hud_todo_${activeApp}`;
+        const savedTodo = localStorage.getItem(todoKey);
+        setTodoList(savedTodo ? JSON.parse(savedTodo) : []);
+
+        setAnimProgress(0);
+        requestRef.current = requestAnimationFrame(animate);
+
+        setSearchQuery('');
+      }, [activeApp]);
+
+      const handleNoteChange = (e) => {
+        const val = e.target.value;
+        setNoteContent(val);
+        localStorage.setItem(`hud_note_${activeApp}`, val);
+      };
+
+      const saveTodos = (newList) => {
+        setTodoList(newList);
+        localStorage.setItem(`hud_todo_${activeApp}`, JSON.stringify(newList));
+      };
+
+      const addTodo = (e) => {
+        e.preventDefault();
+        if (!todoInput.trim()) return;
+        const newTodo = { id: Date.now(), text: todoInput, done: false };
+        saveTodos([...todoList, newTodo]);
+        setTodoInput('');
+      };
+
+      const toggleTodo = (id) => {
+        const newList = todoList.map(t => t.id === id ? { ...t, done: !t.done } : t);
+        saveTodos(newList);
+      };
+
+      const deleteTodo = (id) => {
+        if (focusedTaskId === id) {
+          setFocusedTaskId(null);
+          setIsTimerRunning(false);
+        }
+        const newList = todoList.filter(t => t.id !== id);
+        saveTodos(newList);
+      };
+
+      const [timerMode, setTimerMode] = useState('focus');
+      const [timeLeft, setTimeLeft] = useState(25 * 60);
+      const [isTimerRunning, setIsTimerRunning] = useState(false);
+      const [focusedTaskId, setFocusedTaskId] = useState(null);
+
+      useEffect(() => {
+        let interval = null;
+        if (isTimerRunning && timeLeft > 0) {
+          interval = setInterval(() => {
+            setTimeLeft(t => t - 1);
+          }, 1000);
+        } else if (timeLeft === 0) {
+          setIsTimerRunning(false);
+        }
+        return () => clearInterval(interval);
+      }, [isTimerRunning, timeLeft]);
+
+      const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
+
+      const resetTimer = () => {
+        setIsTimerRunning(false);
+        setTimeLeft(timerMode === 'focus' ? 25 * 60 : 5 * 60);
+        setFocusedTaskId(null);
+      };
+
+      const switchTimerMode = (mode) => {
+        setTimerMode(mode);
+        setIsTimerRunning(false);
+        setTimeLeft(mode === 'focus' ? 25 * 60 : 5 * 60);
+      };
+
+      const startFocusOnTask = (task) => {
+        if (focusedTaskId === task.id && isTimerRunning) {
+          setIsTimerRunning(false);
+        } else {
+          setFocusedTaskId(task.id);
+          setTimerMode('focus');
+          setTimeLeft(25 * 60);
+          setIsTimerRunning(true);
+        }
+      };
+
+      const formatTimer = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      };
+
+      const focusedTaskText = useMemo(() => {
+        if (!focusedTaskId) return "No Focus Task";
+        const task = todoList.find(t => t.id === focusedTaskId);
+        return task ? task.text : "Task Completed";
+      }, [focusedTaskId, todoList]);
+
+      const animate = (timestamp) => {
+        const duration = 400;
+        if (!requestRef.current.startTimestamp) requestRef.current.startTimestamp = timestamp;
+        const progress = Math.min((timestamp - requestRef.current.startTimestamp) / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 4);
+        setAnimProgress(ease);
+        if (progress < 1) requestRef.current = requestAnimationFrame(animate);
+      };
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const container = containerRef.current;
+
+        const dpr = window.devicePixelRatio || 1;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+
+        const appData = shortcutsData[activeApp] || shortcutsData['desktop'];
+        const config = {
+          padding: 24,
+          fontBase: '"Meiryo UI", "Yu Gothic UI", "Segoe UI", sans-serif',
+          fontMono: '"Consolas", "Monaco", monospace',
+          bgColor: 'rgba(15, 23, 42, 0.95)',
+          textColor: '#e2e8f0',
+          keyBgColor: 'rgba(255, 255, 255, 0.9)',
+          keyTextColor: appData.color,
+          accentColor: appData.color
+        };
+
+        ctx.clearRect(0, 0, width, height);
+
+        const drawRoundedRect = (x, y, w, h, r) => {
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.lineTo(x + w - r, y);
+          ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+          ctx.lineTo(x + w, y + h - r);
+          ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+          ctx.lineTo(x + r, y + h);
+          ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+          ctx.lineTo(x, y + r);
+          ctx.quadraticCurveTo(x, y, x + r, y);
+          ctx.closePath();
+        };
+
+        ctx.save();
+        const slideOffset = 20 * (1 - animProgress);
+        ctx.globalAlpha = animProgress;
+        ctx.translate(0, slideOffset);
+
+        ctx.fillStyle = config.bgColor;
+        drawRoundedRect(0, 0, width, height, 12);
+        ctx.fill();
+
+        ctx.strokeStyle = config.accentColor;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = config.accentColor;
+        ctx.shadowBlur = 10;
+        drawRoundedRect(0, 0, width, height, 12);
+        ctx.stroke();
+
+        ctx.clip();
+        ctx.shadowBlur = 0;
+
+        ctx.save();
+        ctx.translate(0, -scrollOffset);
+
+        let currentY = config.padding + 80;
+
+        if (appData.groups) {
+          appData.groups.forEach(group => {
+            const visibleItems = group.items.filter(item => {
+              if (showUnmasteredOnly && item.mastered) return false;
+              if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                return item.key.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+              }
+              return true;
+            });
+
+            if (visibleItems.length === 0) return;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = `bold 12px ${config.fontBase}`;
+            ctx.fillText(group.category, config.padding + 10, currentY);
+            currentY += 24;
+
+            visibleItems.forEach(item => {
+              ctx.font = `bold 13px ${config.fontMono}`;
+              const keyText = item.key;
+              const keyWidth = ctx.measureText(keyText).width;
+
+              ctx.fillStyle = config.keyBgColor;
+              ctx.shadowColor = 'rgba(0,0,0,0.3)';
+              ctx.shadowBlur = 3;
+              ctx.shadowOffsetY = 1;
+
+              const keyRectW = keyWidth + 14;
+              ctx.fillRect(config.padding + 10, currentY - 16, keyRectW, 22);
+
+              ctx.shadowColor = 'transparent';
+              ctx.shadowBlur = 0;
+              ctx.shadowOffsetY = 0;
+
+              ctx.fillStyle = config.keyTextColor;
+              ctx.fillText(keyText, config.padding + 17, currentY);
+
+              const minDescX = 170;
+              const descX = Math.max(config.padding + minDescX, config.padding + 10 + keyWidth + 30);
+
+              ctx.font = `13px ${config.fontBase}`;
+              ctx.fillStyle = config.textColor;
+              ctx.fillText(item.desc, descX, currentY);
+
+              if (item.mastered) {
+                 ctx.fillStyle = '#4ade80';
+                 ctx.font = `12px ${config.fontBase}`;
+                 ctx.fillText('✓', width - config.padding - 20, currentY);
+              }
+
+              currentY += 28;
+            });
+
+            currentY += 16;
+          });
+
+          if (currentY === config.padding + 80) {
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = `14px ${config.fontBase}`;
+            ctx.fillText("条件に一致するショートカットはありません", config.padding + 10, currentY + 30);
+          }
+        }
+
+        ctx.restore();
+
+        ctx.fillStyle = config.bgColor;
+        ctx.fillRect(2, 2, width - 4, 85);
+
+        ctx.beginPath();
+        ctx.arc(config.padding + 20, config.padding + 20, 15, 0, Math.PI * 2);
+        ctx.fillStyle = config.accentColor;
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold 24px ${config.fontBase}`;
+        ctx.fillText(appData.displayName.toUpperCase(), config.padding + 45, config.padding + 28);
+
+        if (searchQuery) {
+            ctx.fillStyle = config.accentColor;
+            ctx.font = `bold 12px ${config.fontBase}`;
+            ctx.fillText(`FILTER: "${searchQuery}"`, width - config.padding - 100, config.padding + 28);
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(config.padding, config.padding + 85);
+        ctx.lineTo(width - config.padding, config.padding + 85);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.restore();
+
+      }, [activeApp, shortcutsData, animProgress, scrollOffset, searchQuery, showUnmasteredOnly]);
+
+      const exportData = () => {
+        const data = {};
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('hud_')) {
+                data[key] = localStorage.getItem(key);
+            }
+        });
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `shortcut_hud_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const importData = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const json = JSON.parse(event.target.result);
+                    Object.keys(json).forEach(key => {
+                       if (key.startsWith('hud_')) {
+                           localStorage.setItem(key, json[key]);
+                       }
+                    });
+                    alert('データを復元しました。ページをリロードします。');
+                    window.location.reload();
+                } catch(err) {
+                    alert('ファイルの読み込みに失敗しました');
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+      };
+
+      const handleEditClick = () => {
+        const data = JSON.parse(JSON.stringify(shortcutsData[activeApp] || shortcutsData['desktop']));
+        setEditingData(data);
+        setIsEditing(true);
+      };
+
+      const handleSave = () => {
+        setShortcutsData(prev => ({ ...prev, [activeApp]: editingData }));
+        setIsEditing(false);
+        setAnimProgress(0);
+        requestRef.current.startTimestamp = null;
+        requestRef.current = requestAnimationFrame(animate);
+      };
+
+      const updateItem = (gIndex, iIndex, field, val) => {
+        const newData = { ...editingData }; newData.groups[gIndex].items[iIndex][field] = val; setEditingData(newData);
+      };
+
+      const toggleItemMastery = (gIndex, iIndex) => {
+        const newData = { ...editingData };
+        const current = newData.groups[gIndex].items[iIndex].mastered;
+        newData.groups[gIndex].items[iIndex].mastered = !current;
+        setEditingData(newData);
+      };
+
+      const updateGroupName = (gIndex, val) => {
+        const newData = { ...editingData }; newData.groups[gIndex].category = val; setEditingData(newData);
+      };
+
+      const deleteItem = (gIndex, iIndex) => {
+        const newData = { ...editingData }; newData.groups[gIndex].items.splice(iIndex, 1); setEditingData(newData);
+      };
+
+      const addItem = (gIndex) => {
+        const newData = { ...editingData }; newData.groups[gIndex].items.push({ key: 'キー', desc: '説明', mastered: false }); setEditingData(newData);
+      };
+
+      const addGroup = () => {
+        const newData = { ...editingData }; if(!newData.groups) newData.groups=[]; newData.groups.push({category:'新規カテゴリ', items:[]}); setEditingData(newData);
+      };
+
+      const deleteGroup = (gIndex) => {
+        if(!window.confirm('このカテゴリを削除しますか？')) return; const newData = { ...editingData }; newData.groups.splice(gIndex, 1); setEditingData(newData);
+      };
+
+      return (
+        <div className="flex flex-col h-screen bg-slate-950 text-white font-sans overflow-hidden">
+
+          <div className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shadow-xl shrink-0">
+            <div className="flex items-center space-x-4 w-full overflow-x-auto no-scrollbar">
+              <div className="flex items-center text-slate-400 shrink-0 border-r border-slate-700 pr-4 mr-2">
+                <Icon name="monitor" className="w-5 h-5 mr-2" />
+                <span className="text-sm font-bold tracking-widest hidden md:inline">HUD v3.0</span>
+              </div>
+
+              <div className="flex space-x-1">
+                {Object.keys(shortcutsData).map((exeName) => {
+                  const app = shortcutsData[exeName];
+                  const isActive = activeApp === exeName;
+                  return (
+                    <button
+                      key={exeName}
+                      onClick={() => setActiveApp(exeName)}
+                      style={{
+                        borderColor: isActive ? app.color : 'transparent',
+                        backgroundColor: isActive ? `${app.color}20` : 'transparent',
+                        color: isActive ? app.color : '#64748b'
+                      }}
+                      className={`
+                        px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap border
+                        hover:bg-slate-800 flex items-center
+                        ${isActive ? 'shadow-[0_0_10px_rgba(0,0,0,0.3)]' : ''}
+                      `}
+                    >
+                      <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: app.color }}></span>
+                      {app.displayName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 ml-4 shrink-0">
+               <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                title="設定・データ管理"
+               >
+                 <Icon name="settings" className="w-5 h-5" />
+               </button>
+               <button
+                onClick={handleEditClick}
+                className="flex items-center px-4 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/50 rounded text-xs font-bold transition-all"
+               >
+                <Icon name="edit" className="w-4 h-4 mr-2" />
+                ショートカット編集
+               </button>
+            </div>
+          </div>
+
+          <div className="flex-1 relative bg-[url('https://images.unsplash.com/photo-1519608487953-e999c86e7455?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+
+            <div className="relative z-10 w-full h-full flex p-6 gap-6">
+
+              <div className="w-72 flex flex-col gap-4 animate-in slide-in-from-left duration-500">
+
+                <div className="bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg shrink-0">
+                  <div className="flex items-center text-slate-400 mb-2">
+                    <Icon name="clock" className="w-4 h-4 mr-2" />
+                    <span className="text-xs font-bold tracking-wider">現在時刻</span>
+                  </div>
+                  <div className="text-4xl font-mono text-white font-bold tracking-tight tabular-nums">
+                    {time.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </div>
+                  <div className="text-slate-400 text-sm mt-1">
+                    {time.toLocaleDateString('ja-JP', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl shadow-lg flex flex-col overflow-hidden relative">
+                  <div
+                    className="absolute top-0 right-0 px-3 py-1 rounded-bl-lg text-[10px] font-bold text-white z-10 shadow-sm"
+                    style={{ backgroundColor: shortcutsData[activeApp]?.color || '#64748b' }}
+                  >
+                    {shortcutsData[activeApp]?.displayName} Mode
+                  </div>
+
+                  <div className="flex border-b border-slate-700 pt-2">
+                    <button
+                      onClick={() => setNoteMode('memo')}
+                      className={`flex-1 py-3 text-xs font-bold flex items-center justify-center transition-colors ${noteMode === 'memo' ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      <Icon name="file-text" className="w-3 h-3 mr-2" /> メモ帳
+                    </button>
+                    <button
+                      onClick={() => setNoteMode('todo')}
+                      className={`flex-1 py-3 text-xs font-bold flex items-center justify-center transition-colors ${noteMode === 'todo' ? 'text-green-400 border-b-2 border-green-400 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      <Icon name="check-square" className="w-3 h-3 mr-2" /> ToDo
+                    </button>
+                  </div>
+                  <div className="flex-1 relative overflow-hidden bg-slate-950/30">
+                    {noteMode === 'memo' ? (
+                      <textarea
+                        value={noteContent}
+                        onChange={handleNoteChange}
+                        placeholder={`${shortcutsData[activeApp]?.displayName} に関するメモ...`}
+                        className="w-full h-full bg-transparent text-slate-300 p-4 focus:outline-none resize-none text-sm leading-relaxed custom-scrollbar font-sans placeholder-slate-600"
+                        spellCheck="false"
+                      />
+                    ) : (
+                      <div className="flex flex-col h-full">
+                        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                          {todoList.length === 0 && <div className="text-center text-slate-600 text-xs mt-10">タスクなし</div>}
+                          {todoList.map(todo => (
+                            <div key={todo.id} className={`flex items-center group p-2 rounded hover:bg-slate-800/50 transition-colors ${todo.done ? 'opacity-50' : ''}`}>
+                              <button onClick={() => toggleTodo(todo.id)} className={`w-4 h-4 rounded border mr-2 flex shrink-0 items-center justify-center transition-colors ${todo.done ? 'bg-green-500 border-green-500' : 'border-slate-500 hover:border-green-400'}`}>{todo.done && <Icon name="check-square" className="w-3 h-3 text-white" />}</button>
+
+                              <span className={`flex-1 text-sm truncate mr-2 ${todo.done ? 'line-through text-slate-500' : 'text-slate-200'}`}>{todo.text}</span>
+
+                              {!todo.done && (
+                                 <button
+                                    onClick={() => startFocusOnTask(todo)}
+                                    title="このタスクに集中する"
+                                    className={`p-1 rounded-full ${focusedTaskId === todo.id && isTimerRunning ? 'text-yellow-400 bg-yellow-400/10' : 'text-slate-600 hover:text-yellow-400 opacity-0 group-hover:opacity-100'} transition-all`}
+                                 >
+                                   {focusedTaskId === todo.id && isTimerRunning ? <Icon name="pause" className="w-3 h-3 fill-current"/> : <Icon name="play" className="w-3 h-3 fill-current"/>}
+                                 </button>
+                              )}
+
+                              <button onClick={() => deleteTodo(todo.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 p-1 transition-opacity ml-1"><Icon name="trash-2" className="w-3 h-3" /></button>
+                            </div>
+                          ))}
+                        </div>
+                        <form onSubmit={addTodo} className="p-3 border-t border-slate-700 bg-slate-800/50 flex"><input value={todoInput} onChange={(e) => setTodoInput(e.target.value)} placeholder="タスク追加..." className="flex-1 bg-slate-900 text-slate-200 text-xs px-3 py-2 rounded-l border border-slate-700 focus:border-green-500 focus:outline-none" /><button type="submit" className="bg-green-600 hover:bg-green-500 text-white px-3 py-2 rounded-r text-xs font-bold transition-colors"><Icon name="plus" className="w-3 h-3" /></button></form>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="flex-1 flex flex-col gap-4 animate-in slide-in-from-bottom duration-500 delay-100">
+
+                <div className="bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg flex flex-col items-center justify-center relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-50"></div>
+
+                  <div className="flex items-center space-x-4 mb-2 z-10">
+                    <button onClick={() => switchTimerMode('focus')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${timerMode === 'focus' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'}`}>集中 (25min)</button>
+                    <button onClick={() => switchTimerMode('break')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${timerMode === 'break' ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-500'}`}>休憩 (5min)</button>
+                  </div>
+
+                  <div className="text-6xl font-mono font-bold text-white tracking-tighter mb-2 z-10 tabular-nums">
+                    {formatTimer(timeLeft)}
+                  </div>
+
+                  <div className="h-6 mb-4 z-10">
+                     {focusedTaskId && (
+                        <div className="flex items-center text-xs text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20 animate-pulse">
+                            <Icon name="check-square" className="w-3 h-3 mr-2" />
+                            <span className="max-w-[150px] truncate">Focusing: {focusedTaskText}</span>
+                        </div>
+                     )}
+                  </div>
+
+                  <div className="flex items-center space-x-4 z-10">
+                    <button onClick={toggleTimer} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isTimerRunning ? 'bg-yellow-500 hover:bg-yellow-400 scale-105' : 'bg-blue-600 hover:bg-blue-500'} text-white shadow-lg`}>
+                      {isTimerRunning ? <Icon name="pause" className="w-5 h-5 fill-current" /> : <Icon name="play" className="w-5 h-5 fill-current ml-1" />}
+                    </button>
+                    <button onClick={resetTimer} className="w-10 h-10 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-slate-300 transition-colors">
+                      <Icon name="rotate-ccw" className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full blur-3xl pointer-events-none transition-colors duration-1000 ${isTimerRunning ? 'bg-yellow-500/10' : 'bg-blue-500/10'}`}></div>
+                </div>
+
+                <div className="flex-1 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg flex flex-col relative overflow-hidden">
+                   <div className="flex items-center text-slate-400 mb-4 z-10">
+                    <Icon name="calendar" className="w-4 h-4 mr-2" />
+                    <span className="text-xs font-bold tracking-wider">CALENDAR</span>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2 z-10">
+                    <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center text-sm z-10">
+                    {getCalendarDays().map((d, i) => (
+                      <div key={i} className={`p-1.5 rounded-md ${!d ? '' : d === currentDay ? 'bg-blue-600 text-white font-bold shadow' : 'text-slate-300 hover:bg-slate-800'}`}>
+                        {d}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="w-[450px] flex flex-col h-full bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl shadow-lg relative overflow-hidden transition-all">
+
+                <div className="h-14 border-b border-slate-700 flex items-center justify-between px-4 bg-slate-900 z-20">
+                   <div className="relative flex-1 mr-4">
+                      <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="ショートカットを検索..."
+                        className="w-full bg-slate-800 text-slate-200 text-xs pl-9 pr-3 py-2 rounded-lg border border-slate-700 focus:border-blue-500 focus:outline-none"
+                      />
+                   </div>
+                   <button
+                     onClick={() => setShowUnmasteredOnly(!showUnmasteredOnly)}
+                     className={`p-2 rounded-lg text-xs font-bold flex items-center transition-all ${showUnmasteredOnly ? 'bg-green-600/20 text-green-400 border border-green-500/50' : 'text-slate-500 hover:bg-slate-800'}`}
+                     title={showUnmasteredOnly ? "未習得のみ表示中" : "すべて表示中"}
+                   >
+                     <Icon name="check-circle" className={`w-4 h-4 ${showUnmasteredOnly ? 'fill-current' : ''}`} />
+                   </button>
+                </div>
+
+                <div
+                    ref={containerRef}
+                    onWheel={(e) => setScrollOffset(prev => Math.max(0, prev + e.deltaY))}
+                    className="flex-1 relative cursor-ns-resize"
+                >
+                    <canvas ref={canvasRef} className="w-full h-full block" />
+                </div>
+
+              </div>
+
+            </div>
+
+            {isSettingsOpen && (
+               <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+                 <div className="bg-slate-900 w-full max-w-md p-6 rounded-xl shadow-2xl border border-slate-700 animate-in zoom-in-95 duration-200">
+                   <div className="flex justify-between items-center mb-6">
+                     <h3 className="text-lg font-bold text-white flex items-center"><Icon name="settings" className="w-5 h-5 mr-2" /> データ管理</h3>
+                     <button onClick={() => setIsSettingsOpen(false)}><Icon name="x" className="w-5 h-5 text-slate-400 hover:text-white" /></button>
+                   </div>
+                   <div className="space-y-4">
+                     <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                        <p className="text-xs text-slate-400 mb-3">すべてのショートカット、メモ、ToDoデータをJSONファイルとして保存します。</p>
+                        <button onClick={exportData} className="w-full flex items-center justify-center py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-bold transition-colors">
+                          <Icon name="download" className="w-4 h-4 mr-2" /> データをエクスポート
+                        </button>
+                     </div>
+                     <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                        <p className="text-xs text-slate-400 mb-3">保存したJSONファイルを読み込んでデータを復元します。</p>
+                        <button onClick={importData} className="w-full flex items-center justify-center py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition-colors">
+                          <Icon name="upload" className="w-4 h-4 mr-2" /> データをインポート
+                        </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+            )}
+
+            {isEditing && editingData && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+                <div className="bg-slate-900 w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl border border-slate-700 flex flex-col animate-in zoom-in-95 duration-200">
+                  <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center rounded-t-xl">
+                    <h3 className="text-lg font-bold text-white flex items-center"><Icon name="keyboard" className="w-5 h-5 mr-2 text-blue-400" />編集中のアプリ: <span className="text-blue-400 ml-1">{editingData.displayName}</span></h3>
+                    <button onClick={() => setIsEditing(false)}><Icon name="x" className="w-5 h-5 text-slate-400 hover:text-white" /></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-900 custom-scrollbar">
+                    {editingData.groups.map((group, gIndex) => (
+                      <div key={gIndex} className="bg-slate-800/40 rounded-lg border border-slate-700/50 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center flex-1 mr-4"><span className="text-xs text-slate-500 font-mono mr-2">カテゴリ</span><input value={group.category} onChange={(e) => updateGroupName(gIndex, e.target.value)} className="bg-transparent text-blue-300 font-bold border-b border-slate-600 focus:border-blue-400 focus:outline-none w-full py-1" /></div>
+                          <div className="flex space-x-1"><button onClick={() => deleteGroup(gIndex)} className="p-1 text-red-500 hover:bg-red-900/20 rounded"><Icon name="trash-2" className="w-4 h-4"/></button></div>
+                        </div>
+                        <div className="space-y-2 pl-4 border-l-2 border-slate-700/50">
+                          {group.items.map((item, iIndex) => (
+                            <div key={iIndex} className="flex space-x-2 group items-center">
+                              <input value={item.key} onChange={(e) => updateItem(gIndex, iIndex, 'key', e.target.value)} placeholder="キー" className="bg-slate-950 text-white text-xs font-mono p-2 rounded border border-slate-700 w-1/4" />
+                              <input value={item.desc} onChange={(e) => updateItem(gIndex, iIndex, 'desc', e.target.value)} placeholder="説明" className="bg-slate-950 text-slate-300 text-xs p-2 rounded border border-slate-700 flex-1" />
+
+                              <button
+                                onClick={() => toggleItemMastery(gIndex, iIndex)}
+                                className={`flex items-center px-2 py-1.5 rounded border text-xs font-bold transition-all ${item.mastered ? 'bg-green-600/20 border-green-500 text-green-400' : 'border-slate-600 text-slate-500 hover:border-slate-400'}`}
+                                title="習得済みにする"
+                              >
+                                 <Icon name="check-circle" className={`w-3 h-3 mr-1 ${item.mastered ? 'fill-current' : ''}`} />
+                                 {item.mastered ? '習得済' : '未習得'}
+                              </button>
+
+                              <button onClick={() => deleteItem(gIndex, iIndex)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 p-1"><Icon name="x" className="w-4 h-4" /></button>
+                            </div>
+                          ))}
+                          <button onClick={() => addItem(gIndex)} className="mt-1 text-xs text-blue-400 hover:text-blue-300 flex items-center"><Icon name="plus" className="w-3 h-3 mr-1"/> アイテム追加</button>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={addGroup} className="w-full py-2 border border-dashed border-slate-600 rounded text-slate-400 hover:text-white text-sm">＋ 新しいカテゴリを追加</button>
+                  </div>
+                  <div className="p-4 border-t border-slate-700 bg-slate-800/80 rounded-b-xl flex justify-end space-x-3">
+                    <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-300 hover:text-white text-sm">キャンセル</button>
+                    <button onClick={handleSave} className="flex items-center px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded shadow-lg"><Icon name="save" className="w-4 h-4 mr-2" />保存する</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<ShortcutHUD />, document.getElementById('root'));
+  </script>
+</body>
+</html>
