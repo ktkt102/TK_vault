@@ -13,7 +13,7 @@
       height: 100%;
       margin: 0;
       padding: 0;
-      overflow: hidden;
+      overflow: auto;
     }
     #root {
       height: 100%;
@@ -527,9 +527,9 @@
           <div className="flex-1 relative bg-[url('https://images.unsplash.com/photo-1519608487953-e999c86e7455?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
 
-            <div className="relative z-10 w-full h-full flex p-6 gap-6">
+            <div className="relative z-10 w-full h-full flex p-4 gap-4 min-w-0">
 
-              <div className="w-72 flex flex-col gap-4 h-full min-h-0 animate-in slide-in-from-left duration-500">
+              <div className="w-72 min-w-[200px] max-w-[288px] flex-shrink-0 flex flex-col gap-4 h-full min-h-0 animate-in slide-in-from-left duration-500">
 
                 <div className="bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg shrink-0">
                   <div className="flex items-center text-slate-400 mb-2">
@@ -616,7 +616,7 @@
 
               </div>
 
-              <div className="flex-1 flex flex-col gap-4 h-full min-h-0 animate-in slide-in-from-bottom duration-500 delay-100">
+              <div className="flex-1 min-w-0 flex flex-col gap-4 h-full min-h-0 animate-in slide-in-from-bottom duration-500 delay-100">
 
                 <div className="bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg flex flex-col items-center justify-center relative overflow-hidden group shrink-0">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-50"></div>
@@ -671,7 +671,7 @@
 
               </div>
 
-              <div className="w-[450px] flex flex-col h-full bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl shadow-lg relative overflow-hidden transition-all">
+              <div className="w-[450px] min-w-[320px] max-w-[450px] flex-shrink-0 flex flex-col h-full bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl shadow-lg relative overflow-hidden transition-all">
 
                 <div className="h-14 border-b border-slate-700 flex items-center justify-between px-4 bg-slate-900 z-20">
                    <div className="relative flex-1 mr-4">
