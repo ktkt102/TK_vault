@@ -57,15 +57,7 @@
     };
 
     function ShortcutHUD() {
-      const canvasRef = useRef(null);
-      const containerRef = useRef(null);
-
       const [activeApp, setActiveApp] = useState('excel.exe');
-      const [scrollOffset, setScrollOffset] = useState(0);
-      useEffect(() => { setScrollOffset(0); }, [activeApp]);
-
-      const [animProgress, setAnimProgress] = useState(0);
-      const requestRef = useRef({});
 
       const [isEditing, setIsEditing] = useState(false);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -288,9 +280,6 @@
         const savedTodo = localStorage.getItem(todoKey);
         setTodoList(savedTodo ? JSON.parse(savedTodo) : []);
 
-        setAnimProgress(0);
-        requestRef.current = requestAnimationFrame(animate);
-
         setSearchQuery('');
       }, [activeApp]);
 
@@ -381,175 +370,6 @@
         return task ? task.text : "Task Completed";
       }, [focusedTaskId, todoList]);
 
-      const animate = (timestamp) => {
-        const duration = 400;
-        if (!requestRef.current.startTimestamp) requestRef.current.startTimestamp = timestamp;
-        const progress = Math.min((timestamp - requestRef.current.startTimestamp) / duration, 1);
-        const ease = 1 - Math.pow(1 - progress, 4);
-        setAnimProgress(ease);
-        if (progress < 1) requestRef.current = requestAnimationFrame(animate);
-      };
-
-      useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const container = containerRef.current;
-
-        const dpr = window.devicePixelRatio || 1;
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-        ctx.scale(dpr, dpr);
-
-        const appData = shortcutsData[activeApp] || shortcutsData['desktop'];
-        const config = {
-          padding: 24,
-          fontBase: '"Meiryo UI", "Yu Gothic UI", "Segoe UI", sans-serif',
-          fontMono: '"Consolas", "Monaco", monospace',
-          bgColor: 'rgba(15, 23, 42, 0.95)',
-          textColor: '#e2e8f0',
-          keyBgColor: 'rgba(255, 255, 255, 0.9)',
-          keyTextColor: appData.color,
-          accentColor: appData.color
-        };
-
-        ctx.clearRect(0, 0, width, height);
-
-        const drawRoundedRect = (x, y, w, h, r) => {
-          ctx.beginPath();
-          ctx.moveTo(x + r, y);
-          ctx.lineTo(x + w - r, y);
-          ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-          ctx.lineTo(x + w, y + h - r);
-          ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-          ctx.lineTo(x + r, y + h);
-          ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-          ctx.lineTo(x, y + r);
-          ctx.quadraticCurveTo(x, y, x + r, y);
-          ctx.closePath();
-        };
-
-        ctx.save();
-        const slideOffset = 20 * (1 - animProgress);
-        ctx.globalAlpha = animProgress;
-        ctx.translate(0, slideOffset);
-
-        ctx.fillStyle = config.bgColor;
-        drawRoundedRect(0, 0, width, height, 12);
-        ctx.fill();
-
-        ctx.strokeStyle = config.accentColor;
-        ctx.lineWidth = 2;
-        ctx.shadowColor = config.accentColor;
-        ctx.shadowBlur = 10;
-        drawRoundedRect(0, 0, width, height, 12);
-        ctx.stroke();
-
-        ctx.clip();
-        ctx.shadowBlur = 0;
-
-        ctx.save();
-        ctx.translate(0, -scrollOffset);
-
-        let currentY = config.padding + 80;
-
-        if (appData.groups) {
-          appData.groups.forEach(group => {
-            const visibleItems = group.items.filter(item => {
-              if (showUnmasteredOnly && item.mastered) return false;
-              if (searchQuery) {
-                const q = searchQuery.toLowerCase();
-                return item.key.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
-              }
-              return true;
-            });
-
-            if (visibleItems.length === 0) return;
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.font = `bold 12px ${config.fontBase}`;
-            ctx.fillText(group.category, config.padding + 10, currentY);
-            currentY += 24;
-
-            visibleItems.forEach(item => {
-              ctx.font = `bold 13px ${config.fontMono}`;
-              const keyText = item.key;
-              const keyWidth = ctx.measureText(keyText).width;
-
-              ctx.fillStyle = config.keyBgColor;
-              ctx.shadowColor = 'rgba(0,0,0,0.3)';
-              ctx.shadowBlur = 3;
-              ctx.shadowOffsetY = 1;
-
-              const keyRectW = keyWidth + 14;
-              ctx.fillRect(config.padding + 10, currentY - 16, keyRectW, 22);
-
-              ctx.shadowColor = 'transparent';
-              ctx.shadowBlur = 0;
-              ctx.shadowOffsetY = 0;
-
-              ctx.fillStyle = config.keyTextColor;
-              ctx.fillText(keyText, config.padding + 17, currentY);
-
-              const minDescX = 170;
-              const descX = Math.max(config.padding + minDescX, config.padding + 10 + keyWidth + 30);
-
-              ctx.font = `13px ${config.fontBase}`;
-              ctx.fillStyle = config.textColor;
-              ctx.fillText(item.desc, descX, currentY);
-
-              if (item.mastered) {
-                 ctx.fillStyle = '#4ade80';
-                 ctx.font = `12px ${config.fontBase}`;
-                 ctx.fillText('✓', width - config.padding - 20, currentY);
-              }
-
-              currentY += 28;
-            });
-
-            currentY += 16;
-          });
-
-          if (currentY === config.padding + 80) {
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.font = `14px ${config.fontBase}`;
-            ctx.fillText("条件に一致するショートカットはありません", config.padding + 10, currentY + 30);
-          }
-        }
-
-        ctx.restore();
-
-        ctx.fillStyle = config.bgColor;
-        ctx.fillRect(2, 2, width - 4, 85);
-
-        ctx.beginPath();
-        ctx.arc(config.padding + 20, config.padding + 20, 15, 0, Math.PI * 2);
-        ctx.fillStyle = config.accentColor;
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold 24px ${config.fontBase}`;
-        ctx.fillText(appData.displayName.toUpperCase(), config.padding + 45, config.padding + 28);
-
-        if (searchQuery) {
-            ctx.fillStyle = config.accentColor;
-            ctx.font = `bold 12px ${config.fontBase}`;
-            ctx.fillText(`FILTER: "${searchQuery}"`, width - config.padding - 100, config.padding + 28);
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(config.padding, config.padding + 85);
-        ctx.lineTo(width - config.padding, config.padding + 85);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.restore();
-
-      }, [activeApp, shortcutsData, animProgress, scrollOffset, searchQuery, showUnmasteredOnly]);
-
       const exportData = () => {
         const data = {};
         Object.keys(localStorage).forEach(key => {
@@ -602,9 +422,6 @@
       const handleSave = () => {
         setShortcutsData(prev => ({ ...prev, [activeApp]: editingData }));
         setIsEditing(false);
-        setAnimProgress(0);
-        requestRef.current.startTimestamp = null;
-        requestRef.current = requestAnimationFrame(animate);
       };
 
       const updateItem = (gIndex, iIndex, field, val) => {
@@ -861,12 +678,94 @@
                    </button>
                 </div>
 
-                <div
-                    ref={containerRef}
-                    onWheel={(e) => setScrollOffset(prev => Math.max(0, prev + e.deltaY))}
-                    className="flex-1 relative cursor-ns-resize"
-                >
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  {(() => {
+                    const appData = shortcutsData[activeApp] || shortcutsData['desktop'];
+                    const hasVisibleItems = appData.groups?.some(group =>
+                      group.items.some(item => {
+                        if (showUnmasteredOnly && item.mastered) return false;
+                        if (searchQuery) {
+                          const q = searchQuery.toLowerCase();
+                          return item.key.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+                        }
+                        return true;
+                      })
+                    );
+
+                    return (
+                      <div className="p-6 space-y-6">
+                        <div className="flex items-center mb-6 pb-4 border-b border-slate-700">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center mr-3"
+                            style={{ backgroundColor: appData.color }}
+                          />
+                          <h2 className="text-2xl font-bold text-white tracking-wide">{appData.displayName.toUpperCase()}</h2>
+                          {searchQuery && (
+                            <div className="ml-auto text-xs font-bold px-3 py-1 rounded-full border" style={{
+                              color: appData.color,
+                              borderColor: appData.color,
+                              backgroundColor: `${appData.color}20`
+                            }}>
+                              FILTER: "{searchQuery}"
+                            </div>
+                          )}
+                        </div>
+
+                        {!hasVisibleItems ? (
+                          <div className="text-center text-slate-500 py-12">
+                            条件に一致するショートカットはありません
+                          </div>
+                        ) : (
+                          appData.groups?.map((group, gIndex) => {
+                            const visibleItems = group.items.filter(item => {
+                              if (showUnmasteredOnly && item.mastered) return false;
+                              if (searchQuery) {
+                                const q = searchQuery.toLowerCase();
+                                return item.key.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+                              }
+                              return true;
+                            });
+
+                            if (visibleItems.length === 0) return null;
+
+                            return (
+                              <div key={gIndex} className="space-y-3">
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                                  {group.category}
+                                </h3>
+                                <div className="space-y-2">
+                                  {visibleItems.map((item, iIndex) => (
+                                    <div
+                                      key={iIndex}
+                                      className="flex items-center bg-slate-800/40 hover:bg-slate-800/60 rounded-lg p-3 transition-colors group"
+                                    >
+                                      <div
+                                        className="px-3 py-1.5 rounded-md font-mono font-bold text-sm shadow-sm min-w-[140px] text-center"
+                                        style={{
+                                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                          color: appData.color
+                                        }}
+                                      >
+                                        {item.key}
+                                      </div>
+                                      <div className="flex-1 text-slate-200 text-sm ml-6">
+                                        {item.desc}
+                                      </div>
+                                      {item.mastered && (
+                                        <div className="text-green-400 font-bold text-lg ml-4">
+                                          ✓
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>
