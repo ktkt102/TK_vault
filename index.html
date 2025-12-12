@@ -114,24 +114,8 @@
             color: #1f2937; /* 黒っぽいグレーに変更 */
         }
 
-        /* 履歴項目のスタイル */
-        .history-item {
-            transition: all 0.2s;
-        }
-        .history-item:hover {
-            transform: translateX(4px);
-        }
-
-        /* スマホ対応: 小さい画面では履歴ボタンを縦並びに */
+        /* スマホ対応: 小さい画面ではラベルを縦並びに */
         @media (max-width: 640px) {
-            .history-controls {
-                flex-direction: column;
-                gap: 8px;
-                width: 100%;
-            }
-            .history-controls button {
-                width: 100%;
-            }
             /* ラジオボタンのラベルも小さい画面では縦並びに */
             .flow-mode-selector {
                 flex-direction: column !important;
@@ -389,33 +373,13 @@
                     具体的な数値は、<a href="https://www.engineeringtoolbox.com/" target="_blank" class="text-blue-600 underline hover:text-blue-800">Engineering Toolbox</a> などの標準的な工学データリソースに掲載されている値と一致しています。<br>
                     エタノール、エンジンオイルの固定値は、一般的な20℃における代表的な実験データに基づいています。
                 </p>
-                <p class="text-xs text-gray-500">*プリセット値は線形補間を使用しています。実際の物性値は温度や圧力によって大きく変化します。</p>
-            </div>
-        </section>
-
-        <!-- 計算履歴セクション -->
-        <section class="pt-6 border-t">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
-                <h2 class="text-2xl font-bold text-gray-800">計算履歴</h2>
-                <div class="flex gap-2 history-controls w-full sm:w-auto">
-                    <button onclick="exportHistory()" class="text-xs px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
-                        エクスポート
-                    </button>
-                    <button onclick="document.getElementById('importFile').click()" class="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
-                        インポート
-                    </button>
-                    <button onclick="clearHistory()" class="text-xs px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
-                        全削除
-                    </button>
-                </div>
-            </div>
-            <input type="file" id="importFile" accept=".json" onchange="importHistory(event)" class="hidden">
-
-            <div id="historyContainer" class="space-y-2 max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-sm">計算履歴はありません</p>
+                <p class="text-xs text-gray-500">*水と空気のプリセット値は1°C刻みのデータテーブルから線形補間により計算されます。実際の物性値は温度や圧力によって変化します。</p>
             </div>
         </section>
     </div>
+
+    <!-- 流体物性値データの読み込み -->
+    <script src="fluid-properties-data.js"></script>
 
     <script>
         // --- 単位変換定数 (全てSI単位[m, m/s, m³/s]への変換係数) ---
@@ -439,28 +403,15 @@
             }
         };
 
-        // --- 流体のプリセットデータ ---
+        // --- 流体のプリセットデータ (外部ファイルから読み込み) ---
         const FLUID_PRESETS = {
             'water': {
                 name: '水',
-                // 標準的な工学便覧の値を参照
-                data: [
-                    { temp: 0, rho: 999.84, mu: 0.001792 },
-                    { temp: 20, rho: 998.20, mu: 0.001002 },
-                    { temp: 50, rho: 988.05, mu: 0.0005471 },
-                    { temp: 80, rho: 971.79, mu: 0.0003550 },
-                    { temp: 100, rho: 958.40, mu: 0.0002820 },
-                ]
+                data: WATER_PROPERTIES  // 1°C刻みデータ（0-100°C）
             },
             'air': {
                 name: '空気',
-                // 標準的な工学便覧の値を参照
-                data: [
-                    { temp: 0, rho: 1.292, mu: 1.716e-5 },
-                    { temp: 20, rho: 1.204, mu: 1.813e-5 },
-                    { temp: 50, rho: 1.092, mu: 1.947e-5 },
-                    { temp: 100, rho: 0.946, mu: 2.181e-5 },
-                ]
+                data: AIR_PROPERTIES  // 1°C刻みデータ（0-100°C）
             },
             'ethanol': {
                 name: 'エタノール (20℃固定)',
@@ -699,207 +650,6 @@
             } else {
                  // 速度モードのときは、入力値に影響を与えないようにする
             }
-
-            // 9. 計算履歴を保存
-            saveToHistory(Re, regimeText, T, name, rho, mu, u_si, L_si, flowMode);
-        }
-
-        // --- 履歴管理機能 ---
-
-        /**
-         * 計算結果を履歴に保存
-         */
-        function saveToHistory(Re, regime, temp, fluidName, rho, mu, velocity, length, flowMode) {
-            const timestamp = new Date().toLocaleString('ja-JP');
-
-            const historyItem = {
-                timestamp: timestamp,
-                Re: Re,
-                regime: regime,
-                inputs: {
-                    temperature: temp,
-                    fluid: fluidName,
-                    rho: rho,
-                    mu: mu,
-                    velocity: velocity,
-                    length: length,
-                    flowMode: flowMode,
-                    // 全ての入力値を保存
-                    lengthValue: characteristicLengthInput.value,
-                    lengthUnit: lengthUnitSelect.value,
-                    velocityValue: velocityInput.value,
-                    velocityUnit: velocityUnitSelect.value,
-                    pipeDiameter: pipeDiameterInput.value,
-                    diameterUnit: diameterUnitSelect.value,
-                    flowRate: flowRateInput.value,
-                    flowRateUnit: flowRateUnitSelect.value,
-                    fluidType: fluidSelect.value
-                }
-            };
-
-            // localStorageから既存の履歴を取得
-            let history = JSON.parse(localStorage.getItem('reynoldsHistory') || '[]');
-
-            // 新しい履歴を先頭に追加（最新が上）
-            history.unshift(historyItem);
-
-            // 最大100件まで保存
-            if (history.length > 100) {
-                history = history.slice(0, 100);
-            }
-
-            // localStorageに保存
-            localStorage.setItem('reynoldsHistory', JSON.stringify(history));
-
-            // 履歴表示を更新
-            displayHistory();
-        }
-
-        /**
-         * 履歴を表示
-         */
-        function displayHistory() {
-            const history = JSON.parse(localStorage.getItem('reynoldsHistory') || '[]');
-            const container = document.getElementById('historyContainer');
-
-            if (history.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-sm">計算履歴はありません</p>';
-                return;
-            }
-
-            container.innerHTML = history.map((item, index) => `
-                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer history-item"
-                     onclick="loadFromHistory(${index})">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-xs text-gray-500">${item.timestamp}</span>
-                        <button onclick="event.stopPropagation(); deleteHistoryItem(${index})"
-                                class="text-xs text-red-500 hover:text-red-700 px-2 py-1">削除</button>
-                    </div>
-                    <div class="text-sm">
-                        <strong class="text-blue-600">Re = ${formatNumber(item.Re)}</strong>
-                        <span class="ml-2 text-gray-600">(${item.regime})</span>
-                    </div>
-                    <div class="text-xs text-gray-600 mt-1">
-                        ${item.inputs.fluid} (${item.inputs.temperature}°C) /
-                        u=${formatNumber(item.inputs.velocity)} m/s /
-                        L=${formatNumber(item.inputs.length)} m
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        /**
-         * 履歴から条件を読み込み
-         */
-        function loadFromHistory(index) {
-            const history = JSON.parse(localStorage.getItem('reynoldsHistory') || '[]');
-            const item = history[index];
-
-            if (!item) return;
-
-            // 入力値を復元
-            temperatureInput.value = item.inputs.temperature;
-            characteristicLengthInput.value = item.inputs.lengthValue;
-            lengthUnitSelect.value = item.inputs.lengthUnit;
-            velocityInput.value = item.inputs.velocityValue;
-            velocityUnitSelect.value = item.inputs.velocityUnit;
-            pipeDiameterInput.value = item.inputs.pipeDiameter;
-            diameterUnitSelect.value = item.inputs.diameterUnit;
-            flowRateInput.value = item.inputs.flowRate;
-            flowRateUnitSelect.value = item.inputs.flowRateUnit;
-            fluidSelect.value = item.inputs.fluidType;
-
-            // フローモードを設定
-            document.querySelector(`input[name="flowMode"][value="${item.inputs.flowMode}"]`).checked = true;
-
-            // UIを更新して再計算
-            updateInputMode();
-            loadPresetValues();
-            calculateReynolds();
-
-            // ページトップにスクロール
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        /**
-         * 特定の履歴項目を削除
-         */
-        function deleteHistoryItem(index) {
-            if (!confirm('この履歴を削除しますか？')) return;
-
-            let history = JSON.parse(localStorage.getItem('reynoldsHistory') || '[]');
-            history.splice(index, 1);
-            localStorage.setItem('reynoldsHistory', JSON.stringify(history));
-            displayHistory();
-        }
-
-        /**
-         * 全履歴を削除
-         */
-        function clearHistory() {
-            if (!confirm('全ての履歴を削除しますか？')) return;
-
-            localStorage.removeItem('reynoldsHistory');
-            displayHistory();
-        }
-
-        /**
-         * 履歴をJSONファイルとしてエクスポート
-         */
-        function exportHistory() {
-            const history = JSON.parse(localStorage.getItem('reynoldsHistory') || '[]');
-
-            if (history.length === 0) {
-                alert('エクスポートする履歴がありません');
-                return;
-            }
-
-            const dataStr = JSON.stringify(history, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `reynolds_history_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        /**
-         * JSONファイルから履歴をインポート
-         */
-        function importHistory(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const importedHistory = JSON.parse(e.target.result);
-
-                    if (!Array.isArray(importedHistory)) {
-                        alert('無効なファイル形式です');
-                        return;
-                    }
-
-                    // 既存の履歴と統合するか選択
-                    if (confirm('既存の履歴に追加しますか？（キャンセルで上書き）')) {
-                        const existingHistory = JSON.parse(localStorage.getItem('reynoldsHistory') || '[]');
-                        const mergedHistory = [...importedHistory, ...existingHistory];
-                        localStorage.setItem('reynoldsHistory', JSON.stringify(mergedHistory.slice(0, 100)));
-                    } else {
-                        localStorage.setItem('reynoldsHistory', JSON.stringify(importedHistory.slice(0, 100)));
-                    }
-
-                    displayHistory();
-                    alert('履歴をインポートしました');
-                } catch (error) {
-                    alert('ファイルの読み込みに失敗しました');
-                }
-            };
-            reader.readAsText(file);
-
-            // ファイル選択をリセット
-            event.target.value = '';
         }
 
         // 初期ロード時にモードとプリセットを読み込み、計算を実行
@@ -907,7 +657,6 @@
             updateInputMode();
             loadPresetValues();
             calculateReynolds();
-            displayHistory();
         };
 
     </script>
