@@ -41,7 +41,7 @@
     .duration-500 { animation-duration: 500ms; }
     .duration-200 { animation-duration: 200ms; }
     .delay-100 { animation-delay: 100ms; }
-    .flash-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 9999; background: rgba(59, 130, 246, 0.3); animation: flash 1s ease-in-out 3; }
+    .flash-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 9999; background: rgba(59, 130, 246, 0.3); animation: flash 1s ease-in-out 10; }
     .timer-finished { animation: pulse-border 1.5s ease-in-out infinite; }
   </style>
 </head>
@@ -342,6 +342,8 @@
       const [isTimerFinished, setIsTimerFinished] = useState(false);
       const titleBlinkIntervalRef = useRef(null);
       const originalTitleRef = useRef(document.title);
+      const originalFaviconRef = useRef(null);
+      const alertFaviconRef = useRef(null);
 
       useEffect(() => {
         let interval = null;
@@ -359,9 +361,9 @@
       const handleTimerFinish = () => {
         setIsTimerFinished(true);
 
-        // Flash animation
+        // Flash animation (10 times × 1 second = 10 seconds)
         setShowFlash(true);
-        setTimeout(() => setShowFlash(false), 3000);
+        setTimeout(() => setShowFlash(false), 10000);
 
         // Browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
@@ -385,11 +387,11 @@
         // Play sound notification
         playNotificationSound();
 
-        // Auto-clear finished state after 10 seconds
+        // Auto-clear finished state after 20 seconds
         setTimeout(() => {
           setIsTimerFinished(false);
           stopTitleBlink();
-        }, 10000);
+        }, 20000);
       };
 
       const startTitleBlink = () => {
@@ -399,6 +401,12 @@
 
         titleBlinkIntervalRef.current = setInterval(() => {
           document.title = isAlternate ? originalTitleRef.current : alertTitle;
+          // Toggle favicon color
+          if (isAlternate) {
+            setFavicon(originalFaviconRef.current || '');
+          } else {
+            setFavicon(alertFaviconRef.current);
+          }
           isAlternate = !isAlternate;
         }, 1000);
       };
@@ -408,6 +416,10 @@
           clearInterval(titleBlinkIntervalRef.current);
           titleBlinkIntervalRef.current = null;
           document.title = originalTitleRef.current;
+          // Restore original favicon
+          if (originalFaviconRef.current) {
+            setFavicon(originalFaviconRef.current);
+          }
         }
       };
 
@@ -433,11 +445,54 @@
         }
       };
 
-      // Request notification permission on mount
+      const createFavicon = (color) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+
+        // Draw circle
+        ctx.beginPath();
+        ctx.arc(16, 16, 14, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // Draw bell emoji or alert symbol
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', 16, 16);
+
+        return canvas.toDataURL('image/png');
+      };
+
+      const setFavicon = (href) => {
+        let link = document.querySelector("link[rel*='icon']");
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = href;
+      };
+
+      // Request notification permission and setup favicons on mount
       useEffect(() => {
         if ('Notification' in window && Notification.permission === 'default') {
           Notification.requestPermission();
         }
+
+        // Save original favicon
+        const link = document.querySelector("link[rel*='icon']");
+        if (link) {
+          originalFaviconRef.current = link.href;
+        } else {
+          originalFaviconRef.current = '';
+        }
+
+        // Generate alert favicons
+        alertFaviconRef.current = createFavicon('#ef4444'); // red
       }, []);
 
       // Cleanup title blink on unmount
