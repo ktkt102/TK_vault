@@ -32,6 +32,8 @@
     @keyframes slide-in-from-left { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes slide-in-from-bottom { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes zoom-in-95 { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    @keyframes flash { 0%, 100% { opacity: 0; } 50% { opacity: 0.8; } }
+    @keyframes pulse-border { 0%, 100% { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } 50% { border-color: rgba(59, 130, 246, 1); box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.5); } }
     .animate-in { animation-duration: 0.5s; animation-fill-mode: both; }
     .slide-in-from-left { animation-name: slide-in-from-left; }
     .slide-in-from-bottom { animation-name: slide-in-from-bottom; }
@@ -39,6 +41,8 @@
     .duration-500 { animation-duration: 500ms; }
     .duration-200 { animation-duration: 200ms; }
     .delay-100 { animation-delay: 100ms; }
+    .flash-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 9999; background: rgba(59, 130, 246, 0.3); animation: flash 1s ease-in-out 3; }
+    .timer-finished { animation: pulse-border 1.5s ease-in-out infinite; }
   </style>
 </head>
 <body>
@@ -334,6 +338,10 @@
       const [timeLeft, setTimeLeft] = useState(25 * 60);
       const [isTimerRunning, setIsTimerRunning] = useState(false);
       const [focusedTaskId, setFocusedTaskId] = useState(null);
+      const [showFlash, setShowFlash] = useState(false);
+      const [isTimerFinished, setIsTimerFinished] = useState(false);
+      const titleBlinkIntervalRef = useRef(null);
+      const originalTitleRef = useRef(document.title);
 
       useEffect(() => {
         let interval = null;
@@ -343,9 +351,99 @@
           }, 1000);
         } else if (timeLeft === 0) {
           setIsTimerRunning(false);
+          handleTimerFinish();
         }
         return () => clearInterval(interval);
       }, [isTimerRunning, timeLeft]);
+
+      const handleTimerFinish = () => {
+        setIsTimerFinished(true);
+
+        // Flash animation
+        setShowFlash(true);
+        setTimeout(() => setShowFlash(false), 3000);
+
+        // Browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const notificationTitle = timerMode === 'focus' ? '🎯 集中時間終了！' : '☕ 休憩時間終了！';
+          const notificationBody = timerMode === 'focus'
+            ? '素晴らしい！休憩を取りましょう。'
+            : 'リフレッシュできましたか？次の集中タイムです！';
+
+          new Notification(notificationTitle, {
+            body: notificationBody,
+            icon: 'https://via.placeholder.com/128/3b82f6/ffffff?text=HUD',
+            badge: 'https://via.placeholder.com/96/3b82f6/ffffff?text=!',
+            requireInteraction: false,
+            silent: false
+          });
+        }
+
+        // Tab title blinking
+        startTitleBlink();
+
+        // Play sound notification
+        playNotificationSound();
+
+        // Auto-clear finished state after 10 seconds
+        setTimeout(() => {
+          setIsTimerFinished(false);
+          stopTitleBlink();
+        }, 10000);
+      };
+
+      const startTitleBlink = () => {
+        stopTitleBlink();
+        let isAlternate = false;
+        const alertTitle = timerMode === 'focus' ? '🔔 集中時間終了！' : '🔔 休憩時間終了！';
+
+        titleBlinkIntervalRef.current = setInterval(() => {
+          document.title = isAlternate ? originalTitleRef.current : alertTitle;
+          isAlternate = !isAlternate;
+        }, 1000);
+      };
+
+      const stopTitleBlink = () => {
+        if (titleBlinkIntervalRef.current) {
+          clearInterval(titleBlinkIntervalRef.current);
+          titleBlinkIntervalRef.current = null;
+          document.title = originalTitleRef.current;
+        }
+      };
+
+      const playNotificationSound = () => {
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+          console.warn('Audio notification failed:', e);
+        }
+      };
+
+      // Request notification permission on mount
+      useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }, []);
+
+      // Cleanup title blink on unmount
+      useEffect(() => {
+        return () => stopTitleBlink();
+      }, []);
 
       const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
 
@@ -353,12 +451,16 @@
         setIsTimerRunning(false);
         setTimeLeft(timerMode === 'focus' ? 25 * 60 : 5 * 60);
         setFocusedTaskId(null);
+        setIsTimerFinished(false);
+        stopTitleBlink();
       };
 
       const switchTimerMode = (mode) => {
         setTimerMode(mode);
         setIsTimerRunning(false);
         setTimeLeft(mode === 'focus' ? 25 * 60 : 5 * 60);
+        setIsTimerFinished(false);
+        stopTitleBlink();
       };
 
       const startFocusOnTask = (task) => {
@@ -618,7 +720,7 @@
 
               <div className="flex-1 min-w-0 flex flex-col gap-4 h-full min-h-0 animate-in slide-in-from-bottom duration-500 delay-100">
 
-                <div className="bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg flex flex-col items-center justify-center relative overflow-hidden group shrink-0">
+                <div className={`bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-5 shadow-lg flex flex-col items-center justify-center relative overflow-hidden group shrink-0 ${isTimerFinished ? 'timer-finished' : ''}`}>
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-50"></div>
 
                   <div className="flex items-center space-x-4 mb-2 z-10">
@@ -879,6 +981,8 @@
                 </div>
               </div>
             )}
+
+            {showFlash && <div className="flash-overlay"></div>}
 
           </div>
         </div>
