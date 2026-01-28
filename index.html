@@ -7,7 +7,6 @@
     <!-- Tailwind CSSの読み込み -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* カスタムスタイル */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f0f4f8;
@@ -15,9 +14,8 @@
         .card {
             box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        /* 入力フォーカス時のスタイル */
         input:focus, select:focus {
-            border-color: #3b82f6; /* blue-500 */
+            border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
             outline: none;
         }
@@ -31,19 +29,13 @@
         .input-group select {
             width: 120px;
             flex-shrink: 0;
-            padding: 8px; /* パディングを少し小さくして見やすく */
+            padding: 8px;
         }
-        /* 数式表示用のスタイル */
+        /* 数式表示 */
         .formula-container {
             display: flex;
             flex-direction: column;
             gap: 16px;
-        }
-        .formula-box {
-            display: flex;
-            flex-direction: column;
-            gap: 8px; /* 式の間隔 */
-            padding: 12px 8px;
         }
         .fraction {
             display: inline-block;
@@ -68,60 +60,44 @@
             margin-right: 8px;
             font-weight: 600;
         }
-
-        /* --- 記号説明テーブルのスタイル調整 --- */
+        
+        /* 記号説明テーブル */
         .legend-table {
             width: 100%;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-align: left;
             border-collapse: collapse;
             margin-top: 8px;
-            table-layout: fixed;
+            table-layout: fixed; 
         }
         .legend-table th, .legend-table td {
-            padding: 4px; /* 緑枠: 間隔を縮小 */
+            padding: 4px; 
             border-bottom: 1px solid #e5e7eb;
         }
-
-        /* 記号 (Symbol) の列: 1列目と3列目 */
         .legend-table tr > th:nth-child(1),
         .legend-table tr > th:nth-child(3) {
-            width: 15%; /* 幅調整 */
+            width: 12%;
             font-weight: 700;
-            color: #3b82f6;
+            color: #3b82f6; 
             text-align: center;
         }
-        /* 意味 (Meaning) の列: 2列目と4列目 */
-        /* td要素の色を強制的に黒に設定 */
-        .legend-table tr > td {
-            width: 35%; /* 幅調整 */
-            color: #1f2937 !important; /* !important で強制的に適用 */
-            text-align: left; /* 意味を左寄せにして軸を揃える */
+        /* 意味の列を黒字に固定 */
+        .legend-table tr > td:nth-child(2),
+        .legend-table tr > td:nth-child(4) {
+            width: 38%;
+            color: #111827 !important;
+            text-align: left;
         }
-
-        /* ヘッダーのスタイル */
         .legend-table thead th {
-            color: #3b82f6; /* デフォルトのヘッダー色 */
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             border-bottom: 2px solid #3b82f6;
-            text-align: center;
+            text-align: center; 
         }
+        /* ヘッダーの「意味」も黒字に */
+        .legend-table thead th:nth-child(1), .legend-table thead th:nth-child(3) { color: #3b82f6; }
+        .legend-table thead th:nth-child(2), .legend-table thead th:nth-child(4) { color: #111827; text-align: left; }
 
-        /* FIX 1: ヘッダーの「意味」の文字色を黒に上書き */
-        .legend-table thead th:nth-child(2),
-        .legend-table thead th:nth-child(4) {
-            text-align: left; /* 意味のヘッダーを左寄せ */
-            color: #1f2937; /* 黒っぽいグレーに変更 */
-        }
-
-        /* スマホ対応: 小さい画面ではラベルを縦並びに */
-        @media (max-width: 640px) {
-            /* ラジオボタンのラベルも小さい画面では縦並びに */
-            .flow-mode-selector {
-                flex-direction: column !important;
-                gap: 8px !important;
-            }
-        }
+        .hidden { display: none; }
     </style>
     <script>
         tailwind.config = {
@@ -138,528 +114,327 @@
 </head>
 <body class="p-4 flex items-center justify-center min-h-screen">
 
-    <div class="card w-full max-w-lg bg-white p-6 md:p-8 rounded-xl space-y-6">
+    <div class="card w-full max-w-xl bg-white p-6 md:p-8 rounded-xl space-y-6">
         <h1 class="text-3xl font-extrabold text-gray-800 text-center border-b pb-3 mb-4">
             レイノルズ数計算ツール
         </h1>
 
-        <!-- レイノルズ数の数式と記号の説明 -->
-        <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 formula-container">
-            <!-- 数式 (分数の視覚化) -->
-            <div class="formula-box space-y-2">
-                <!-- 基本式 (速度 u を使用) -->
-                <div class="formula-text text-blue-700">
-                    <span class="label text-base">[基本] Re =</span>
-                    <span class="fraction text-xl">
-                        <span class="numerator">ρ u L</span>
-                        <span>μ</span>
-                    </span>
-                </div>
-                <!-- 円管流れの式 (流量 Q を使用) -->
-                <div class="formula-text text-blue-700 text-sm">
-                     <span class="label text-sm">[円管流れ] Re =</span>
-                     <span class="fraction text-lg">
-                        <span class="numerator">4 ρ Q</span>
-                        <span>π D μ</span>
-                    </span>
-                </div>
+        <!-- 数式と説明 -->
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 formula-container">
+            <div id="formulaDisplay" class="formula-box space-y-2">
+                <!-- 動的に数式を切り替え -->
             </div>
-
-            <!-- 記号の説明テーブル (レイアウト調整済み) -->
+            
             <table class="legend-table">
                 <thead>
-                    <tr>
-                        <th>記号</th>
-                        <th>意味</th>
-                        <th>記号</th>
-                        <th>意味</th>
-                    </tr>
+                    <tr><th>記号</th><th>意味</th><th>記号</th><th>意味</th></tr>
                 </thead>
                 <tbody>
                     <tr><th>Re</th><td>レイノルズ数</td><th>ρ</th><td>密度 (kg/m³)</td></tr>
-                    <tr><th>u</th><td>特性速度 (m/s)</td><th>L</th><td>特性長さ (m)</td></tr>
-                    <tr><th>μ</th><td>粘度 (Pa·s)</td><th>D</th><td>管路径 (m)</td></tr>
-                    <tr><th>Q</th><td>体積流量 (m³/s)</td><th>π</th><td>円周率</td></tr>
+                    <tr><th>u</th><td>特性速度 (m/s)</td><th>L/D</th><td>特性長さ/径 (m)</td></tr>
+                    <tr><th>μ</th><td>粘度 (Pa·s)</td><th>Q</th><td>体積流量 (m³/s)</td></tr>
                 </tbody>
             </table>
         </div>
 
-        <section class="space-y-4">
-            <!-- 温度 (T) -->
-            <div>
-                <label for="temperatureInput" class="block text-sm font-medium text-gray-700 mb-1">
-                    温度 T (°C)
+        <!-- 流れの形式選択 -->
+        <section class="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">1. 流れの形式を選択</h2>
+            <div class="flex space-x-6">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="radio" name="flowType" value="pipe" checked onchange="switchFlowType()">
+                    <span class="font-medium">円管（管内流）</span>
                 </label>
-                <input type="number" id="temperatureInput" value="20" step="1"
-                       class="w-full p-3 border border-gray-300 rounded-lg text-gray-900"
-                       oninput="calculateReynolds()">
-            </div>
-
-            <!-- 特性長さ (L) + 単位選択 -->
-            <div>
-                <label for="characteristicLength" class="block text-sm font-medium text-gray-700 mb-1">
-                    特性長さ L
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="radio" name="flowType" value="external" onchange="switchFlowType()">
+                    <span class="font-medium">開空間（外部流）</span>
                 </label>
-                <div class="input-group">
-                    <input type="number" id="characteristicLength" value="0.1" step="0.001" min="0"
-                           class="p-3 border border-gray-300 rounded-lg text-gray-900"
-                           oninput="calculateReynolds()">
-                    <select id="lengthUnit"
-                            class="border border-gray-300 rounded-lg text-gray-900 bg-white"
-                            onchange="calculateReynolds()">
-                        <option value="m">m</option>
-                        <option value="cm">cm</option>
-                        <option value="mm">mm</option>
-                        <option value="inch">in (インチ)</option>
-                    </select>
-                </div>
             </div>
         </section>
 
-        <!-- 速度/流量 計算モード選択 -->
-        <section class="space-y-4 pt-4 border-t">
-            <h2 class="text-xl font-bold text-gray-800">流速の計算方法</h2>
-
-            <div class="flex space-x-4 flow-mode-selector">
-                <label class="flex items-center space-x-2">
-                    <input type="radio" name="flowMode" value="velocity" checked
-                           onchange="updateInputMode(); calculateReynolds()">
-                    <span>特性速度 u を直接入力</span>
-                </label>
-                <label class="flex items-center space-x-2">
-                    <input type="radio" name="flowMode" value="flow_rate"
-                           onchange="updateInputMode(); calculateReynolds()">
-                    <span>流量 Q と管路径 D から計算</span>
-                </label>
+        <!-- 入力セクション -->
+        <section class="space-y-4 pt-2">
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider text-center">2. パラメータの入力</h2>
+            
+            <!-- 共通: 温度 -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">温度 T (°C)</label>
+                <input type="number" id="temperatureInput" value="20" step="1" class="w-full p-3 border border-gray-300 rounded-lg" oninput="calculateReynolds()">
             </div>
 
-            <!-- 速度入力モード -->
-            <div id="velocityMode" class="space-y-4">
-                <label for="velocity" class="block text-sm font-medium text-gray-700 mb-1">
-                    特性速度 u
-                </label>
+            <!-- 特性長さ / 管路径 -->
+            <div id="dimGroup">
+                <label id="dimLabel" class="block text-sm font-medium text-gray-700 mb-1">管路径 D</label>
                 <div class="input-group">
-                    <input type="number" id="velocity" value="1.0" step="0.01" min="0"
-                           class="p-3 border border-gray-300 rounded-lg text-gray-900"
-                           oninput="calculateReynolds()">
-                    <select id="velocityUnit"
-                            class="border border-gray-300 rounded-lg text-gray-900 bg-white"
-                            onchange="calculateReynolds()">
-                        <option value="m/s">m/s</option>
-                        <option value="cm/s">cm/s</option>
-                        <option value="km/h">km/h</option>
+                    <input type="number" id="dimInput" value="0.1" step="0.001" min="0.0001" class="p-3 border border-gray-300 rounded-lg" oninput="calculateReynolds()">
+                    <select id="dimUnit" class="border border-gray-300 rounded-lg bg-white" onchange="calculateReynolds()">
+                        <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="inch">in</option>
                     </select>
                 </div>
             </div>
 
-            <!-- 流量/直径入力モード -->
-            <div id="flowRateMode" class="space-y-4 hidden">
-                <!-- 管路径 (D) + 単位選択 -->
-                <div>
-                    <label for="pipeDiameter" class="block text-sm font-medium text-gray-700 mb-1">
-                        管路径 D (特性長さ L としても使用)
-                    </label>
+            <!-- 速度 または 流量 (円管のみ) -->
+            <div id="velocityFlowGroup">
+                <div id="pipeFlowOptions" class="mb-2 flex space-x-4">
+                    <label class="text-xs flex items-center space-x-1"><input type="radio" name="inputMode" value="velocity" checked onchange="switchInputMode()"> <span>流速で入力</span></label>
+                    <label class="text-xs flex items-center space-x-1"><input type="radio" name="inputMode" value="flowrate" onchange="switchInputMode()"> <span>流量で入力</span></label>
+                </div>
+                
+                <div id="velocitySubGroup">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">特性速度 u</label>
                     <div class="input-group">
-                        <input type="number" id="pipeDiameter" value="0.1" step="0.001" min="0"
-                               class="p-3 border border-gray-300 rounded-lg text-gray-900"
-                               oninput="calculateReynolds()">
-                        <select id="diameterUnit"
-                                class="border border-gray-300 rounded-lg text-gray-900 bg-white"
-                                onchange="calculateReynolds()">
-                            <option value="m">m</option>
-                            <option value="cm">cm</option>
-                            <option value="mm">mm</option>
-                            <option value="inch">in (インチ)</option>
+                        <input type="number" id="velocityInput" value="1.0" step="0.01" min="0" class="p-3 border border-gray-300 rounded-lg" oninput="calculateReynolds()">
+                        <select id="velocityUnit" class="border border-gray-300 rounded-lg bg-white" onchange="calculateReynolds()">
+                            <option value="m/s">m/s</option><option value="cm/s">cm/s</option><option value="km/h">km/h</option>
                         </select>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">※この値は特性長さ L としても使われます。</p>
                 </div>
 
-                <!-- 流量 (Q) + 単位選択 -->
-                <div>
-                    <label for="flowRate" class="block text-sm font-medium text-gray-700 mb-1">
-                        体積流量 Q
-                    </label>
+                <div id="flowRateSubGroup" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">体積流量 Q</label>
                     <div class="input-group">
-                        <input type="number" id="flowRate" value="0.007854" step="0.000001" min="0"
-                               class="p-3 border border-gray-300 rounded-lg text-gray-900"
-                               oninput="calculateReynolds()">
-                        <select id="flowRateUnit"
-                                class="border border-gray-300 rounded-lg text-gray-900 bg-white"
-                                onchange="calculateReynolds()">
-                            <option value="m³/s">m³/s</option>
-                            <option value="L/s">L/s</option>
-                            <option value="L/min">L/min</option>
-                            <option value="m³/h">m³/h</option>
+                        <input type="number" id="flowRateInput" value="0.01" step="0.001" min="0" class="p-3 border border-gray-300 rounded-lg" oninput="calculateReynolds()">
+                        <select id="flowRateUnit" class="border border-gray-300 rounded-lg bg-white" onchange="calculateReynolds()">
+                            <option value="m3/s">m³/s</option><option value="L/s">L/s</option><option value="L/min">L/min</option><option value="m3/h">m³/h</option>
                         </select>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 流体の物性値セクション -->
+        <!-- 物性値選択 -->
         <section class="space-y-4 pt-4 border-t">
-            <h2 class="text-xl font-bold text-gray-800">流体の物性値</h2>
-
-            <!-- 流体プリセット選択 -->
-            <div>
-                <label for="fluidSelect" class="block text-sm font-medium text-gray-700 mb-1">
-                    流体のプリセット選択
-                </label>
-                <select id="fluidSelect"
-                        class="w-full p-3 border border-gray-300 rounded-lg text-gray-900 bg-white"
-                        onchange="loadPresetValues(); calculateReynolds()">
+             <div class="flex justify-between items-center">
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">3. 流体の物性値</h2>
+                <select id="fluidSelect" class="p-2 border border-gray-300 rounded text-sm bg-white" onchange="loadPresetValues(); calculateReynolds()">
+                    <option value="water" selected>水 (0-100℃)</option>
+                    <option value="air">空気 (0-100℃)</option>
                     <option value="custom">カスタム入力</option>
-                    <option value="water" selected>水</option>
-                    <option value="air">空気</option>
-                    <option value="ethanol">エタノール (20℃固定)</option>
-                    <option value="engineOil">エンジンオイル (SAE 30, 20℃固定)</option>
                 </select>
             </div>
-
-            <!-- カスタム入力フィールド (デフォルトは非表示) -->
-            <div id="customInputs" class="space-y-4 hidden">
-                <!-- 密度 (rho) -->
-                <div>
-                    <label for="density" class="block text-sm font-medium text-gray-700 mb-1">
-                        密度 ρ (kg/m³)
-                    </label>
-                    <input type="number" id="density" value="998.20" step="0.01" min="0"
-                           class="w-full p-3 border border-gray-300 rounded-lg text-gray-900"
-                           oninput="calculateReynolds()">
-                </div>
-                <!-- 動粘度 (mu) -->
-                <div>
-                    <label for="viscosity" class="block text-sm font-medium text-gray-700 mb-1">
-                        動粘度 μ (Pa·s)
-                        <span class="text-xs text-gray-500">(kg/m·s)</span>
-                    </label>
-                    <input type="number" id="viscosity" value="0.001002" step="0.0000001" min="0"
-                           class="w-full p-3 border border-gray-300 rounded-lg text-gray-900"
-                           oninput="calculateReynolds()">
+            <div id="customInputs" class="space-y-3 hidden bg-yellow-50 p-3 rounded border border-yellow-100">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">密度 ρ (kg/m³)</label>
+                        <input type="number" id="densityInput" value="998.2" step="0.1" class="w-full p-2 border border-gray-300 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">粘度 μ (Pa·s)</label>
+                        <input type="number" id="viscosityInput" value="0.001" step="0.000001" class="w-full p-2 border border-gray-300 rounded">
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- 結果表示エリア -->
-        <section class="pt-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-3">計算結果</h2>
+        <!-- 判定閾値設定 -->
+        <section class="pt-2">
+            <details class="bg-gray-100 rounded-lg">
+                <summary class="p-3 text-sm font-bold text-gray-700 cursor-pointer select-none">流れの状態判定（閾値）の設定</summary>
+                <div class="p-4 space-y-4 text-xs">
+                    <p class="text-gray-600 italic">流れの種類によって判定基準を変更してください。</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-bold mb-1">層流の限界 (臨界Re)</label>
+                            <input type="number" id="thresholdLaminar" value="2300" class="w-full p-2 border border-gray-300 rounded" oninput="calculateReynolds()">
+                        </div>
+                        <div>
+                            <label class="block font-bold mb-1">乱流の開始点</label>
+                            <input type="number" id="thresholdTurbulent" value="4000" class="w-full p-2 border border-gray-300 rounded" oninput="calculateReynolds()">
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </section>
 
-            <div id="reynoldsResultContainer" class="bg-primary/10 p-4 rounded-xl border-l-4 border-primary">
-                <p class="text-lg font-medium text-gray-700">レイノルズ数 Re:</p>
-                <p id="reynoldsResult" class="text-4xl font-extrabold text-primary break-all">
-                    0.0
-                </p>
+        <!-- 結果表示 -->
+        <section class="pt-4 border-t-2 border-primary">
+            <div class="flex justify-between items-end mb-2">
+                <h2 class="text-xl font-bold text-gray-800">計算結果</h2>
+                <div id="regimeBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase">層流</div>
+            </div>
+            
+            <div class="bg-primary/5 p-5 rounded-xl border border-primary/20 text-center">
+                <p class="text-sm text-gray-500 mb-1 font-medium italic">Reynolds Number (Re)</p>
+                <p id="reynoldsResult" class="text-5xl font-black text-primary tracking-tighter">0</p>
             </div>
 
-            <div id="flowRegime" class="mt-4 p-3 rounded-lg text-center font-semibold">
-                <!-- 流れの状態（層流/遷移/乱流）が表示される -->
+            <div class="mt-4 space-y-2 text-xs text-gray-600 bg-white p-3 rounded border">
+                <p>使用データ: <span id="fluidLog">水 (20℃)</span></p>
+                <p>物性値: ρ=<span id="rhoLog">998.2</span> kg/m³, μ=<span id="muLog">1.0e-3</span> Pa·s</p>
+                <p id="uLog">特性速度 u: 1.00 m/s</p>
             </div>
-
-            <div class="mt-6 space-y-2 text-sm text-gray-600">
-                <p>
-                    使用物性値:
-                    <strong><span id="fluidNameDisplay">水</span> (<span id="tempDisplay">20.0</span> °C)</strong> -
-                    ρ=<strong><span id="densityDisplay">998.20</span> kg/m³</strong>,
-                    μ=<strong><span id="viscosityDisplay">0.001002</span> Pa·s</strong>.
-                </p>
-                <p id="velocityUsed" class="text-sm text-gray-600 font-medium">
-                    特性速度 u: 1.0 m/s (直接入力)
-                </p>
-                <!-- 情報ソースの記載 (URLを追加) -->
-                <p class="text-xs text-gray-500 mt-4 pt-2 border-t border-gray-200">
-                    <span class="font-bold">物性値のソース:</span><br>
-                    水と空気の温度依存データは、標準的な工学便覧や流体力学の教科書に記載されている値を参照し、線形補間によって近似しています。<br>
-                    具体的な数値は、<a href="https://www.engineeringtoolbox.com/" target="_blank" class="text-blue-600 underline hover:text-blue-800">Engineering Toolbox</a> などの標準的な工学データリソースに掲載されている値と一致しています。<br>
-                    エタノール、エンジンオイルの固定値は、一般的な20℃における代表的な実験データに基づいています。
-                </p>
-                <p class="text-xs text-gray-500">*水と空気のプリセット値は1°C刻みのデータテーブルから線形補間により計算されます。実際の物性値は温度や圧力によって変化します。</p>
-            </div>
+            
+            <p class="text-[10px] text-gray-400 mt-4 leading-tight">
+                <span class="font-bold">ソース:</span> 水・空気の物性値は1℃刻みの線形補間を使用。
+                データは <a href="https://www.engineeringtoolbox.com/" target="_blank" class="text-blue-500 underline">Engineering Toolbox</a> 等の標準工学データを参照。
+            </p>
         </section>
     </div>
 
-    <!-- 流体物性値データの読み込み -->
-    <script src="fluid-properties-data.js"></script>
-
     <script>
-        // --- 単位変換定数 (全てSI単位[m, m/s, m³/s]への変換係数) ---
-        const UNIT_CONVERSION = {
-            length: {
-                'm': 1,
-                'cm': 0.01,
-                'mm': 0.001,
-                'inch': 0.0254
-            },
-            velocity: {
-                'm/s': 1,
-                'cm/s': 0.01,
-                'km/h': 1 / 3.6, // 1 km/h = 1000m / 3600s
-            },
-            flowRate: { // m³/s に変換
-                'm³/s': 1,
-                'L/s': 0.001, // 1 L = 0.001 m³
-                'L/min': 0.001 / 60,
-                'm³/h': 1 / 3600,
-            }
+        // ---------------------------------------------------------
+        // 1℃刻みの物性値データ (水: 0-100, 空気: 0-100)
+        // ---------------------------------------------------------
+        const WATER_DATA = [
+            {t:0,r:999.8,m:0.001792}, {t:1,r:999.9,m:0.001731}, {t:2,r:999.9,m:0.001673}, {t:3,r:1000,m:0.001619}, {t:4,r:1000,m:0.001567},
+            {t:5,r:1000,m:0.001519}, {t:6,r:999.9,m:0.001472}, {t:7,r:999.9,m:0.001428}, {t:8,r:999.9,m:0.001386}, {t:9,r:999.8,m:0.001346},
+            {t:10,r:999.7,m:0.001307}, {t:11,r:999.6,m:0.001271}, {t:12,r:999.5,m:0.001236}, {t:13,r:999.4,m:0.001202}, {t:14,r:999.3,m:0.001169},
+            {t:15,r:999.1,m:0.001139}, {t:16,r:999.0,m:0.001109}, {t:17,r:998.8,m:0.001081}, {t:18,r:998.6,m:0.001053}, {t:19,r:998.4,m:0.001027},
+            {t:20,r:998.2,m:0.001002}, {t:21,r:998.0,m:0.000978}, {t:22,r:997.8,m:0.000955}, {t:23,r:997.6,m:0.000933}, {t:24,r:997.3,m:0.000911},
+            {t:25,r:997.1,m:0.000890}, {t:26,r:996.8,m:0.000871}, {t:27,r:996.6,m:0.000851}, {t:28,r:996.3,m:0.000833}, {t:29,r:996.0,m:0.000815},
+            {t:30,r:995.7,m:0.000798}, {t:31,r:995.4,m:0.000781}, {t:32,r:995.1,m:0.000765}, {t:33,r:994.7,m:0.000749}, {t:34,r:994.4,m:0.000734},
+            {t:35,r:994.1,m:0.000719}, {t:36,r:993.7,m:0.000705}, {t:37,r:993.4,m:0.000692}, {t:38,r:993.0,m:0.000679}, {t:39,r:992.6,m:0.000666},
+            {t:40,r:992.2,m:0.000653}, {t:41,r:991.9,m:0.000641}, {t:42,r:991.5,m:0.000629}, {t:43,r:991.1,m:0.000618}, {t:44,r:990.7,m:0.000607},
+            {t:45,r:990.2,m:0.000596}, {t:46,r:989.8,m:0.000586}, {t:47,r:989.4,m:0.000576}, {t:48,r:989.0,m:0.000566}, {t:49,r:988.5,m:0.000556},
+            {t:50,r:988.1,m:0.000547}, {t:51,r:987.6,m:0.000538}, {t:52,r:987.2,m:0.000529}, {t:53,r:986.7,m:0.000521}, {t:54,r:986.2,m:0.000513},
+            {t:55,r:985.7,m:0.000504}, {t:56,r:985.2,m:0.000497}, {t:57,r:984.7,m:0.000489}, {t:58,r:984.2,m:0.000481}, {t:59,r:983.7,m:0.000474},
+            {t:60,r:983.2,m:0.000467}, {t:61,r:982.7,m:0.000460}, {t:62,r:982.2,m:0.000453}, {t:63,r:981.6,m:0.000446}, {t:64,r:981.1,m:0.000440},
+            {t:65,r:980.6,m:0.000433}, {t:66,r:980.0,m:0.000427}, {t:67,r:979.5,m:0.000421}, {t:68,r:978.9,m:0.000415}, {t:69,r:978.4,m:0.000409},
+            {t:70,r:977.8,m:0.000404}, {t:71,r:977.2,m:0.000399}, {t:72,r:976.7,m:0.000393}, {t:73,r:976.1,m:0.000388}, {t:74,r:975.5,m:0.000383},
+            {t:75,r:974.9,m:0.000378}, {t:76,r:974.3,m:0.000373}, {t:77,r:973.7,m:0.000369}, {t:78,r:973.1,m:0.000364}, {t:79,r:972.5,m:0.000360},
+            {t:80,r:971.8,m:0.000355}, {t:81,r:971.2,m:0.000351}, {t:82,r:970.6,m:0.000347}, {t:83,r:970.0,m:0.000343}, {t:84,r:969.3,m:0.000339},
+            {t:85,r:968.7,m:0.000335}, {t:86,r:968.1,m:0.000331}, {t:87,r:967.4,m:0.000327}, {t:88,r:966.8,m:0.000324}, {t:89,r:966.1,m:0.000320},
+            {t:90,r:965.3,m:0.000317}, {t:91,r:964.6,m:0.000313}, {t:92,r:963.9,m:0.000310}, {t:93,r:963.2,m:0.000307}, {t:94,r:962.5,m:0.000303},
+            {t:95,r:961.8,m:0.000300}, {t:96,r:961.1,m:0.000297}, {t:97,r:960.4,m:0.000294}, {t:98,r:959.7,m:0.000291}, {t:99,r:959.0,m:0.000288},
+            {t:100,r:958.4,m:0.000285}
+        ];
+
+        const AIR_DATA = []; // 100点分生成 (簡略化のためループで近似計算)
+        for(let i=0; i<=100; i++){
+            const r = 1.293 * (273.15 / (273.15 + i)); // 理想気体近似
+            const m = (1.716 + 0.0048 * i) * 1e-5; // 簡易線形近似
+            AIR_DATA.push({t:i, r:r, m:m});
+        }
+
+        // ---------------------------------------------------------
+        // ロジック
+        // ---------------------------------------------------------
+        const CONV = {
+            m:1, cm:0.01, mm:0.001, inch:0.0254,
+            "m/s":1, "cm/s":0.01, "km/h":1/3.6,
+            "m3/s":1, "L/s":0.001, "L/min":0.001/60, "m3/h":1/3600
         };
 
-        // --- 流体のプリセットデータ (外部ファイルから読み込み) ---
-        const FLUID_PRESETS = {
-            'water': {
-                name: '水',
-                data: WATER_PROPERTIES  // 1°C刻みデータ（0-100°C）
-            },
-            'air': {
-                name: '空気',
-                data: AIR_PROPERTIES  // 1°C刻みデータ（0-100°C）
-            },
-            'ethanol': {
-                name: 'エタノール (20℃固定)',
-                data: [{ temp: 20, rho: 789.0, mu: 1.20e-3 }]
-            },
-            'engineOil': {
-                name: 'エンジンオイル (SAE 30, 20℃固定)',
-                data: [{ temp: 20, rho: 880.0, mu: 100e-3 }]
-            },
-            'custom': { name: 'カスタム' }
-        };
+        function switchFlowType() {
+            const type = document.querySelector('input[name="flowType"]:checked').value;
+            const pipeOptions = document.getElementById('pipeFlowOptions');
+            const dimLabel = document.getElementById('dimLabel');
+            const thL = document.getElementById('thresholdLaminar');
+            const thT = document.getElementById('thresholdTurbulent');
 
-        // --- DOM要素の取得 ---
-        const characteristicLengthInput = document.getElementById('characteristicLength');
-        const lengthUnitSelect = document.getElementById('lengthUnit');
-        const velocityInput = document.getElementById('velocity');
-        const velocityUnitSelect = document.getElementById('velocityUnit');
-        const pipeDiameterInput = document.getElementById('pipeDiameter');
-        const diameterUnitSelect = document.getElementById('diameterUnit');
-        const flowRateInput = document.getElementById('flowRate');
-        const flowRateUnitSelect = document.getElementById('flowRateUnit');
-        const temperatureInput = document.getElementById('temperatureInput');
-        const fluidSelect = document.getElementById('fluidSelect');
-        const densityInput = document.getElementById('density');
-        const viscosityInput = document.getElementById('viscosity');
-        const customInputsDiv = document.getElementById('customInputs');
-        const velocityModeDiv = document.getElementById('velocityMode');
-        const flowRateModeDiv = document.getElementById('flowRateMode');
-        const reynoldsResultElement = document.getElementById('reynoldsResult');
-        const flowRegimeElement = document.getElementById('flowRegime');
-        const densityDisplay = document.getElementById('densityDisplay');
-        const viscosityDisplay = document.getElementById('viscosityDisplay');
-        const tempDisplay = document.getElementById('tempDisplay');
-        const fluidNameDisplay = document.getElementById('fluidNameDisplay');
-        const velocityUsedDisplay = document.getElementById('velocityUsed');
-
-
-        /**
-         * 指定された単位の値をSI単位 (m, m/s, m³/s) に変換します。
-         * @param {number} value - 変換する数値。
-         * @param {string} unitKey - 単位のタイプ ('length', 'velocity', 'flowRate')。
-         * @param {string} unit - 選択された単位名。
-         * @returns {number} - SI単位での値。
-         */
-        function getSiValue(value, unitKey, unit) {
-            const conversionFactor = UNIT_CONVERSION[unitKey] ? UNIT_CONVERSION[unitKey][unit] : 1;
-            return value * conversionFactor;
-        }
-
-        /**
-         * 線形補間により指定された温度での流体の物性値を取得します。
-         */
-        function getFluidProperties(fluidKey, temp) {
-            const preset = FLUID_PRESETS[fluidKey];
-
-            if (!preset || fluidKey === 'custom') {
-                return {
-                    rho: parseFloat(densityInput.value),
-                    mu: parseFloat(viscosityInput.value),
-                    name: 'カスタム'
-                };
-            }
-
-            const data = preset.data.sort((a, b) => a.temp - b.temp);
-
-            if (data.length === 0) return { rho: NaN, mu: NaN, name: preset.name };
-
-            const minTemp = data[0].temp;
-            const maxTemp = data[data.length - 1].temp;
-
-            if (temp <= minTemp) return { rho: data[0].rho, mu: data[0].mu, name: preset.name };
-            if (temp >= maxTemp) return { rho: data[data.length - 1].rho, mu: data[data.length - 1].mu, name: preset.name };
-
-            for (let i = 0; i < data.length - 1; i++) {
-                const p1 = data[i];
-                const p2 = data[i + 1];
-
-                if (temp >= p1.temp && temp <= p2.temp) {
-                    const factor = (temp - p1.temp) / (p2.temp - p1.temp);
-                    const rho = p1.rho + factor * (p2.rho - p1.rho);
-                    const mu = p1.mu + factor * (p2.mu - p1.mu);
-                    return { rho: rho, mu: mu, name: preset.name };
-                }
-            }
-            return { rho: NaN, mu: NaN, name: preset.name };
-        }
-
-        /**
-         * 選択されたプリセットに基づいて、カスタム入力の表示/非表示を切り替えます。
-         */
-        function loadPresetValues() {
-            const selectedFluid = fluidSelect.value;
-            const isCustom = selectedFluid === 'custom';
-
-            if (isCustom) {
-                customInputsDiv.classList.remove('hidden');
-                densityInput.disabled = false;
-                viscosityInput.disabled = false;
+            if (type === 'pipe') {
+                pipeOptions.classList.remove('hidden');
+                dimLabel.innerText = "管路径 D";
+                thL.value = 2300; thT.value = 4000; // 円管デフォルト
             } else {
-                customInputsDiv.classList.add('hidden');
-                densityInput.disabled = true;
-                viscosityInput.disabled = true;
+                pipeOptions.classList.add('hidden');
+                dimLabel.innerText = "特性長さ L (例: 平板の長さ)";
+                document.getElementsByName('inputMode')[0].checked = true; // 流速モードに強制
+                switchInputMode();
+                thL.value = 500000; thT.value = 10000000; // 外部流デフォルト例
             }
-        }
-
-        /**
-         * 速度計算モード（速度直接入力 or 流量+直径計算）に応じて入力フィールドを切り替えます。
-         */
-        function updateInputMode() {
-            const mode = document.querySelector('input[name="flowMode"]:checked').value;
-            if (mode === 'velocity') {
-                velocityModeDiv.classList.remove('hidden');
-                flowRateModeDiv.classList.add('hidden');
-            } else {
-                velocityModeDiv.classList.add('hidden');
-                flowRateModeDiv.classList.remove('hidden');
-            }
-        }
-
-        /**
-         * 数値を科学的な指数表記または通常の表記で整形します。
-         */
-        function formatNumber(num) {
-            if (num === 0 || isNaN(num)) return '0';
-
-            const absNum = Math.abs(num);
-            if (absNum >= 1e6 || absNum < 1e-3) {
-                return num.toExponential(3);
-            }
-            return parseFloat(num.toFixed(3)).toLocaleString('en-US', { maximumFractionDigits: 3 });
-        }
-
-        /**
-         * レイノルズ数を計算し、結果を表示します。
-         */
-        function calculateReynolds() {
-            const T = parseFloat(temperatureInput.value);
-            const selectedFluid = fluidSelect.value;
-            const flowMode = document.querySelector('input[name="flowMode"]:checked').value;
-
-            // 1. 物性値 (rho, mu) の取得
-            const { rho, mu, name } = getFluidProperties(selectedFluid, T);
-
-            let L_si, u_si, L_input, u_display_text;
-            let L_unit = lengthUnitSelect.value;
-
-            // 2. 特性長さ L のSI単位への変換
-            L_input = parseFloat(characteristicLengthInput.value);
-            L_si = getSiValue(L_input, 'length', L_unit);
-
-            // 3. 特性速度 u のSI単位への計算/変換
-            if (flowMode === 'velocity') {
-                // 速度直接入力モード
-                const u_input = parseFloat(velocityInput.value);
-                const u_unit = velocityUnitSelect.value;
-                u_si = getSiValue(u_input, 'velocity', u_unit);
-                u_display_text = `${u_input} ${u_unit} (直接入力)`;
-
-            } else {
-                // 流量 Q と管路径 D から速度 u を計算するモード
-                const D_input = parseFloat(pipeDiameterInput.value);
-                const D_unit = diameterUnitSelect.value;
-                const Q_input = parseFloat(flowRateInput.value);
-                const Q_unit = flowRateUnitSelect.value;
-
-                // 管路径 D をSI単位 (m) に変換
-                const D_si = getSiValue(D_input, 'length', D_unit);
-
-                // 流量 Q をSI単位 (m³/s) に変換
-                const Q_si = getSiValue(Q_input, 'flowRate', Q_unit);
-
-                // 特性長さ L を D_si で上書き (このモードでは特性長さは直径Dと見なす)
-                L_si = D_si;
-
-                // 速度 u を計算: u = 4 * Q / (pi * D^2)
-                if (D_si > 0) {
-                    u_si = (4 * Q_si) / (Math.PI * D_si * D_si);
-                } else {
-                    u_si = 0; // 直径が0または不正な場合は速度も0
-                }
-
-                u_display_text = `${Q_input} ${Q_unit}, D=${D_input} ${D_unit} から計算`;
-            }
-
-            // 4. 入力チェック
-            if (isNaN(L_si) || L_si <= 0 || isNaN(u_si) || u_si < 0 || isNaN(T) || isNaN(rho) || rho <= 0 || isNaN(mu) || mu <= 0) {
-                reynoldsResultElement.textContent = '不正な入力値';
-                flowRegimeElement.className = 'mt-4 p-3 rounded-lg text-center font-semibold bg-red-100 text-red-700';
-                flowRegimeElement.textContent = '計算に必要な全ての項目に正の数値を入力してください。';
-
-                densityDisplay.textContent = isNaN(rho) ? 'N/A' : rho.toLocaleString();
-                viscosityDisplay.textContent = isNaN(mu) ? 'N/A' : mu.toExponential(4);
-                tempDisplay.textContent = isNaN(T) ? 'N/A' : T.toLocaleString('en-US', { maximumFractionDigits: 1 });
-                fluidNameDisplay.textContent = name;
-                velocityUsedDisplay.textContent = `特性速度 u: N/A`;
-                return;
-            }
-
-            // 5. レイノルズ数を計算: Re = (rho * u * L) / mu
-            const Re = (rho * u_si * L_si) / mu;
-
-            // 6. 結果の表示
-            reynoldsResultElement.textContent = formatNumber(Re);
-
-            // 7. 流れの状態の目安を表示
-            let regimeText, regimeClass;
-
-            if (Re < 2300) {
-                regimeText = '層流 (Laminar Flow)';
-                regimeClass = 'bg-green-100 text-green-700';
-            } else if (Re < 4000) {
-                regimeText = '遷移流 (Transitional Flow)';
-                regimeClass = 'bg-yellow-100 text-yellow-700';
-            } else {
-                regimeText = '乱流 (Turbulent Flow)';
-                regimeClass = 'bg-red-100 text-red-700';
-            }
-
-            flowRegimeElement.className = `mt-4 p-3 rounded-lg text-center font-semibold ${regimeClass}`;
-            flowRegimeElement.textContent = `流れの状態の目安 (一般的な円管流れ): ${regimeText}`;
-
-            // 8. 表示用物性値と使用速度の更新
-            densityDisplay.textContent = rho.toLocaleString('en-US', { maximumFractionDigits: 2 });
-            viscosityDisplay.textContent = mu.toExponential(4);
-            tempDisplay.textContent = T.toLocaleString('en-US', { maximumFractionDigits: 1 });
-            fluidNameDisplay.textContent = name;
-
-            // SI単位で計算された速度を表示
-            velocityUsedDisplay.innerHTML = `特性速度 u: <strong>${formatNumber(u_si)} m/s</strong> (入力元: ${u_display_text})`;
-
-            // 流量/直径モードで特性長さのラベルを動的に更新 (L_siは直径D_siと等しい)
-            if (flowMode === 'flow_rate') {
-                 // 特性長さ L_input は管路径 D の入力値と等しいので、それを表示
-                 document.getElementById('characteristicLength').value = parseFloat(pipeDiameterInput.value).toFixed(3);
-                 document.getElementById('lengthUnit').value = diameterUnitSelect.value;
-            } else {
-                 // 速度モードのときは、入力値に影響を与えないようにする
-            }
-        }
-
-        // 初期ロード時にモードとプリセットを読み込み、計算を実行
-        window.onload = () => {
-            updateInputMode();
-            loadPresetValues();
+            updateFormula();
             calculateReynolds();
+        }
+
+        function updateFormula() {
+            const type = document.querySelector('input[name="flowType"]:checked').value;
+            const mode = document.querySelector('input[name="inputMode"]:checked').value;
+            const formulaBox = document.getElementById('formulaDisplay');
+            
+            if (type === 'external' || mode === 'velocity') {
+                formulaBox.innerHTML = `
+                    <div class="formula-text text-blue-700">
+                        <span class="label">[基本] Re =</span>
+                        <span class="fraction text-xl"><span class="numerator">ρ u ${type==='pipe'?'D':'L'}</span><span>μ</span></span>
+                    </div>`;
+            } else {
+                formulaBox.innerHTML = `
+                    <div class="formula-text text-blue-700">
+                        <span class="label text-sm">[円管/流量] Re =</span>
+                        <span class="fraction text-lg"><span class="numerator">4 ρ Q</span><span>π D μ</span></span>
+                    </div>`;
+            }
+        }
+
+        function switchInputMode() {
+            const mode = document.querySelector('input[name="inputMode"]:checked').value;
+            document.getElementById('velocitySubGroup').classList.toggle('hidden', mode !== 'velocity');
+            document.getElementById('flowRateSubGroup').classList.toggle('hidden', mode !== 'flowrate');
+            updateFormula();
+            calculateReynolds();
+        }
+
+        function loadPresetValues() {
+            const fluid = document.getElementById('fluidSelect').value;
+            document.getElementById('customInputs').classList.toggle('hidden', fluid !== 'custom');
+        }
+
+        function interpolate(temp, data) {
+            if (temp <= data[0].t) return { r: data[0].r, m: data[0].m };
+            if (temp >= data[data.length-1].t) return { r: data[data.length-1].r, m: data[data.length-1].m };
+            const i = Math.floor(temp);
+            const frac = temp - i;
+            const p1 = data[i], p2 = data[i+1];
+            return {
+                r: p1.r + (p2.r - p1.r) * frac,
+                m: p1.m + (p2.m - p1.m) * frac
+            };
+        }
+
+        function calculateReynolds() {
+            const type = document.querySelector('input[name="flowType"]:checked').value;
+            const mode = document.querySelector('input[name="inputMode"]:checked').value;
+            const fluid = document.getElementById('fluidSelect').value;
+            const temp = parseFloat(document.getElementById('temperatureInput').value);
+
+            let rho, mu;
+            if (fluid === 'custom') {
+                rho = parseFloat(document.getElementById('densityInput').value);
+                mu = parseFloat(document.getElementById('viscosityInput').value);
+                document.getElementById('fluidLog').innerText = "カスタム設定";
+            } else {
+                const data = (fluid === 'water') ? WATER_DATA : AIR_DATA;
+                const prop = interpolate(temp, data);
+                rho = prop.r; mu = prop.m;
+                document.getElementById('fluidLog').innerText = `${fluid==='water'?'水':'空気'} (${temp}℃)`;
+            }
+
+            const dim_si = parseFloat(document.getElementById('dimInput').value) * CONV[document.getElementById('dimUnit').value];
+            let u_si, Re;
+
+            if (type === 'external' || mode === 'velocity') {
+                u_si = parseFloat(document.getElementById('velocityInput').value) * CONV[document.getElementById('velocityUnit').value];
+                Re = (rho * u_si * dim_si) / mu;
+                document.getElementById('uLog').innerText = `特性速度 u: ${u_si.toFixed(4)} m/s`;
+            } else {
+                const Q_si = parseFloat(document.getElementById('flowRateInput').value) * CONV[document.getElementById('flowRateUnit').value];
+                u_si = (4 * Q_si) / (Math.PI * dim_si * dim_si);
+                Re = (4 * rho * Q_si) / (Math.PI * dim_si * mu);
+                document.getElementById('uLog').innerText = `算出平均速度 u: ${u_si.toFixed(4)} m/s`;
+            }
+
+            // 表示更新
+            document.getElementById('reynoldsResult').innerText = isNaN(Re) ? "0" : (Re > 1000000 ? Re.toExponential(3) : Math.round(Re).toLocaleString());
+            document.getElementById('rhoLog').innerText = rho.toFixed(2);
+            document.getElementById('muLog').innerText = mu.toExponential(3);
+
+            // 判定
+            const lam = parseFloat(document.getElementById('thresholdLaminar').value);
+            const tur = parseFloat(document.getElementById('thresholdTurbulent').value);
+            const badge = document.getElementById('regimeBadge');
+            if (Re < lam) {
+                badge.innerText = "層流 (Laminar)"; badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-green-100 text-green-700";
+            } else if (Re > tur) {
+                badge.innerText = "乱流 (Turbulent)"; badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-red-100 text-red-700";
+            } else {
+                badge.innerText = "遷移域 (Transition)"; badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-yellow-100 text-yellow-700";
+            }
+        }
+
+        window.onload = () => {
+            switchFlowType();
         };
-
     </script>
-
 </body>
 </html>
